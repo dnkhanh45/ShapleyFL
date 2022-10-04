@@ -9,5 +9,5 @@
 /fedtask/
 .vscode*
 /utils/figures/
-*.txt
+# *.txt
 test*
