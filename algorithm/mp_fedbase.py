@@ -84,7 +84,7 @@ class MPBasicServer(BasicServer):
             client_package: the reply from the client and will be 'None' if losing connection
         """
         
-        gpu_id = int(mp.current_process().name[-1]) - 1
+        gpu_id = int(mp.current_process().name.rsplit('-', 1)[1]) - 1
         gpu_id = gpu_id % self.gpus
 
         torch.manual_seed(0)
