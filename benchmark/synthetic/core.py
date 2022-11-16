@@ -103,6 +103,10 @@ class TaskGen(BasicTaskGen):
         ex = np.exp(x)
         sum_ex = np.sum(np.exp(x))
         return ex / sum_ex
+    
+    def draw_zipf_distribution(self, num_clients, z):
+        p = (1/np.arange(1,num_clients + 1))**(z)
+        return p/sum(p)
 
     def gen_data(self, num_clients):
         self.dimension = 60
@@ -110,6 +114,7 @@ class TaskGen(BasicTaskGen):
         W_global = np.random.normal(0, 1, (self.dimension, self.num_classes))
         b_global = np.random.normal(0, 1, self.num_classes)
         v_global = np.zeros(self.dimension)
+        
         # create Sigma = Diag([i^(-1.2) for i in range(60)])
         diagonal = np.zeros(self.dimension)
         for j in range(self.dimension):
@@ -163,7 +168,24 @@ class TaskGen(BasicTaskGen):
             B = np.random.normal(0, self.skewness, num_clients)
             for k in range(num_clients): V[k] = np.random.normal(B[k], 1, self.dimension)
             samples_per_user = np.random.lognormal(4, 2, (num_clients)).astype(int) + self.minvol
-
+        elif self.dist_id == 11:
+            """Zipf distribution and I.I.D"""
+            W = [W_global for _ in range(num_clients)]
+            b = [b_global for _ in range(num_clients)]
+            num_samples = 10000
+            samples_per_user = self.draw_zipf_distribution(self.num_clients, 0.7) * num_samples
+            samples_per_user = np.array(samples_per_user, dtype=int)
+        elif self.dist_id == 12:
+            """Zipf distribution and non-I.I.D"""
+            Us = np.random.normal(0, self.skewness, num_clients)
+            W = [np.random.normal(Us[k], 1, (self.dimension, self.num_classes)) for k in range(num_clients)]
+            b = [np.random.normal(Us[k], 1, self.num_classes) for k in range(num_clients)]
+            B = np.random.normal(0, self.skewness, num_clients)
+            for k in range(num_clients): V[k] = np.random.normal(B[k], 1, self.dimension)
+            num_samples = 10000
+            samples_per_user = self.draw_zipf_distribution(self.num_clients, 0.7) * num_samples
+            samples_per_user = np.array(samples_per_user, dtype=int)
+            
         X_split = [[] for _ in range(num_clients)]
         y_split = [[] for _ in range(num_clients)]
         for k in range(num_clients):
@@ -176,6 +198,7 @@ class TaskGen(BasicTaskGen):
                 Y_k[i] = np.argmax(softmax(tmp))
             X_split[k] = X_k.tolist()
             y_split[k] = Y_k.tolist()
+            print("{}-th users has {} examples".format(k, len(y_split[k])))
         return X_split, y_split
 
 class TaskReader(XYTaskReader):
