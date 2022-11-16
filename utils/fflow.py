@@ -41,8 +41,8 @@ def read_option():
     parser.add_argument('--eval_interval', help='evaluate every __ rounds;', type=int, default=1)
     parser.add_argument('--num_threads', help='the number of threads;', type=int, default=1)
     parser.add_argument('--num_threads_per_gpu', help="the number of threads per gpu in the clients computing session;", type=int, default=1)
-    parser.add_argument('--num_gpus', default=3, type=int)
-    parser.add_argument('--gpu', default=0, type=int)
+    # parser.add_argument('--num_gpus', default=1, type=int)
+    parser.add_argument('--gpu', nargs="+", default=0, type=int)
     # the simulating system settings of clients
     
     # constructing the heterogeity of the network

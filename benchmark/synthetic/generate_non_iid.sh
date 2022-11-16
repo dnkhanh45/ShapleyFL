@@ -1,0 +1,11 @@
+python generate_non_iid.py \
+    --alpha 0.0 \
+    --beta 0.0 \
+    --n_clients 16 \
+    --n_dim 30 \
+    --n_classes 10 \
+    --n_train 4800 \
+    --n_valid 960 \
+    --n_test 960 \
+    --zipf_z 0.7 \
+    --seed 1234
