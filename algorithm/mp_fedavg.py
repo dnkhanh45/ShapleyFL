@@ -1,4 +1,3 @@
-from pathlib import Path
 from .mp_fedbase import MPBasicServer, MPBasicClient
 import torch
 import os
@@ -6,6 +5,8 @@ import os
 class Server(MPBasicServer):
     def __init__(self, option, model, clients, test_data = None):
         super(Server, self).__init__(option, model, clients, test_data)
+        self.global_save_dir = os.path.join('./chkpts', str(option['task']), 'global')
+        os.makedirs(self.global_save_dir, exist_ok=True)
         self.local_save_dir = os.path.join('./chkpts', str(option['task']), 'local')
         os.makedirs(self.local_save_dir, exist_ok=True)
     
@@ -34,14 +35,19 @@ class Server(MPBasicServer):
         self.selected_clients = self.sample()
         # training
         models, train_losses, names = self.communicate(self.selected_clients, pool)
+        # Save local checkpoints
+        round_local_save_dir = os.path.join(self.local_save_dir, 'Round{}'.format(t))
+        os.makedirs(round_local_save_dir, exist_ok=True)
         for model, name in zip(models, names):
-            torch.save(model.state_dict(), os.path.join(self.local_save_dir, 'Round{}_{}.pt'.format(t, name)))
+            torch.save(model.state_dict(), os.path.join(round_local_save_dir, '{}.pt'.format(name)))
         # check whether all the clients have dropped out, because the dropped clients will be deleted from self.selected_clients
         if not self.selected_clients: return
         # aggregate: pk = 1/K as default where K=len(selected_clients)
         device0 = torch.device(f"cuda:{self.server_gpu_id}")
         models = [i.to(device0) for i in models]
         self.model = self.aggregate(models, p = [1.0 * self.client_vols[cid] / self.data_vol for cid in self.selected_clients])
+        # Save global checkpoints
+        torch.save(self.model.state_dict(), os.path.join(self.global_save_dir, 'Round{}.pt'.format(t)))
         return
 
 

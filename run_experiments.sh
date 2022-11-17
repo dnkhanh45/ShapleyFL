@@ -2,7 +2,7 @@ python main.py \
     --task synthetic_cnum16_non_iid_00_00 \
     --model lr \
     --algorithm mp_fedavg \
-    --num_rounds 1 \
+    --num_rounds 200 \
     --num_epochs 20 \
     --learning_rate 0.01 \
     --lr_scheduler 0 \
