@@ -67,7 +67,7 @@ class BasicTaskGen:
     }
     _TYPE_DATASET = ['2DImage', '3DImage', 'Text', 'Sequential', 'Graph', 'Tabular']
 
-    def __init__(self, benchmark, dist_id, skewness, rawdata_path, seed=0):
+    def __init__(self, benchmark, dist_id, skewness, rawdata_path, num_samples, zipf_skew, seed=0):
         self.benchmark = benchmark
         self.rootpath = './fedtask'
         self.rawdata_path = rawdata_path
@@ -76,6 +76,8 @@ class BasicTaskGen:
         self.skewness = 0 if dist_id==0 else skewness
         self.num_clients = -1
         self.seed = seed
+        self.num_samples = num_samples
+        self.zipf_skew = zipf_skew
         set_random_seed(self.seed)
 
     def run(self):

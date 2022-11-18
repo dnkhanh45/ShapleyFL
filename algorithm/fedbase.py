@@ -44,7 +44,7 @@ class BasicServer():
         """
         logger.time_start('Total Time Cost')
         for round in range(self.num_rounds+1):
-            print("--------------Round {}--------------".format(round))
+            print("---------------------------Round {}---------------------------".format(round))
             logger.time_start('Time Cost')
 
             # federated train

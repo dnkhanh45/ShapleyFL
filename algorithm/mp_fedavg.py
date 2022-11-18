@@ -1,6 +1,7 @@
 from .mp_fedbase import MPBasicServer, MPBasicClient
 import torch
 import os
+import numpy as np
 
 class Server(MPBasicServer):
     def __init__(self, option, model, clients, test_data = None):
@@ -45,7 +46,13 @@ class Server(MPBasicServer):
         # aggregate: pk = 1/K as default where K=len(selected_clients)
         device0 = torch.device(f"cuda:{self.server_gpu_id}")
         models = [i.to(device0) for i in models]
-        self.model = self.aggregate(models, p = [1.0 * self.client_vols[cid] / self.data_vol for cid in self.selected_clients])
+        # weighted
+        p = [1.0 * self.client_vols[cid] / self.data_vol for cid in self.selected_clients]
+        # uniform
+        p = np.ones(len(self.selected_clients)) / len(self.selected_clients)
+        p = p / p.sum()
+        # self.model = self.aggregate(models, p = )
+        self.model = self.aggregate(models, p=p)
         # Save global checkpoints
         torch.save(self.model.state_dict(), os.path.join(self.global_save_dir, 'Round{}.pt'.format(t)))
         return

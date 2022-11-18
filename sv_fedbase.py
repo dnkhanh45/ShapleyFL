@@ -33,7 +33,7 @@ class ShapleyValueServer(MPBasicServer):
         print(fmodule.device)
 
 
-    def utility_function(self, client_indexes_):
+    def utility_function(self, client_indexes_, round):
         if len(client_indexes_) == 0:
             return 0.0
         bitset_key = self.rnd_bitset(client_indexes_).bits()
@@ -41,16 +41,19 @@ class ShapleyValueServer(MPBasicServer):
             return self.rnd_dict[bitset_key]
         selected_clients = [self.clients[index] for index in client_indexes_]
         models = [client.model for client in selected_clients]
-        p = np.array([client.datavol for client in selected_clients])
+        # weighted
+        # p = np.array([client.datavol for client in selected_clients])
+        # uniform
+        p = np.ones(len(selected_clients)) / len(selected_clients)
         p = p / p.sum()
         self.model = self.aggregate(models=models, p=p)
         self.model.to(fmodule.device)
         acc, loss = self.test()
-        self.rnd_dict[bitset_key] = acc
-        return acc
+        self.rnd_dict[bitset_key] = acc / pow(round, 2)
+        return self.rnd_dict[bitset_key]
 
     
-    def shapley_value(self, client_index_, client_indexes_):
+    def shapley_value(self, client_index_, client_indexes_, round):
         if client_index_ not in client_indexes_:
             return 0.0
         
@@ -61,7 +64,7 @@ class ShapleyValueServer(MPBasicServer):
             a_i = 0.0
             count_i = 0
             for subset in itertools.combinations(rest_client_indexes, i):
-                a_i += self.utility_function(set(subset).union({client_index_})) - self.utility_function(subset)
+                a_i += self.utility_function(set(subset).union({client_index_}), round) - self.utility_function(subset, round)
                 count_i += 1
             a_i = a_i / count_i
             result += a_i
@@ -91,24 +94,25 @@ class ShapleyValueServer(MPBasicServer):
 
         # Define variables used in round
         self.rnd_bitset = bitset('round_bitset', tuple(self.rnd_clients))
-        self.rnd_clients_bitsetkey = self.rnd_bitset(self.rnd_clients).bits()
+        # self.rnd_clients_bitsetkey = self.rnd_bitset(self.rnd_clients).bits()
         self.rnd_dict = dict()
         self.model.load_state_dict(torch.load(
             os.path.join(self.global_save_dir, 'Round{}.pt'.format(round_)),
             map_location=fmodule.device
         ))
         acc, loss = self.test()
-        self.rnd_dict[self.rnd_clients_bitsetkey] = acc
+        # self.rnd_dict[self.rnd_clients_bitsetkey] = acc
         print('Round {}: {}'.format(round_, acc), end=' ')
         return
 
 
-    def calculate_round_exact_SV(self):
+    def calculate_round_exact_SV(self, round):
         round_SV = np.zeros(self.num_clients)
         for client_index in range(self.num_clients):
             round_SV[client_index] = self.shapley_value(
                 client_index_=client_index,
-                client_indexes_=self.rnd_clients
+                client_indexes_=self.rnd_clients,
+                round=round
             )
         return round_SV
 
@@ -120,7 +124,7 @@ class ShapleyValueServer(MPBasicServer):
             for v in self.rnd_clients:
                 if u >= v:
                     continue
-                w = self.utility_function([u]) + self.utility_function([v]) - self.utility_function([u, v])
+                w = self.utility_function([u], round_) + self.utility_function([v], round_) - self.utility_function([u, v], round_)
                 w *= len(self.test_data)
                 w = int(np.round(w))
                 edges.append((u, v, w))
@@ -139,25 +143,26 @@ class ShapleyValueServer(MPBasicServer):
         return
 
     
-    def calculate_round_const_lambda_SV(self):
+    def calculate_round_const_lambda_SV(self, round):
         round_SV = np.zeros(self.num_clients)
         for m in range(self.num_partitions):
             for client_index in range(self.num_clients):
                 if client_index in self.rnd_partitions[m]:
                     round_SV[client_index] += self.shapley_value(
                         client_index_=client_index,
-                        client_indexes_=self.rnd_partitions[m]
+                        client_indexes_=self.rnd_partitions[m],
+                        round=round
                     )
         return round_SV
 
 
-    def sub_utility_function(self, partition_index_, client_indexes_):
+    def sub_utility_function(self, partition_index_, client_indexes_, round):
         partition = self.rnd_partitions[partition_index_]
         intersection = list(set(partition).intersection(set(client_indexes_)))
-        return self.utility_function(intersection)
+        return self.utility_function(intersection, round)
 
     
-    def calculate_round_optimal_lambda_SV(self):
+    def calculate_round_optimal_lambda_SV(self, round):
         # Calculate A_matrix and b_vector
         NUMBER_OF_SAMPLES = 30
         A_matrix = np.zeros((self.num_partitions, self.num_partitions))
@@ -171,12 +176,14 @@ class ShapleyValueServer(MPBasicServer):
             for i in range(self.num_partitions):
                 b_vector[i] += self.sub_utility_function(
                     partition_index_=i,
-                    client_indexes_=subset
+                    client_indexes_=subset,
+                    round = round
                 ) * self.utility_function(subset)
                 for j in range(i, self.num_partitions):
                     A_matrix[i, j] += self.sub_utility_function(
                         partition_index_=i,
-                        client_indexes_=subset
+                        client_indexes_=subset,
+                        round=round
                     ) * self.sub_utility_function(
                         partition_index_=j,
                         client_indexes_=subset
@@ -209,18 +216,23 @@ class ShapleyValueServer(MPBasicServer):
         # Calculate Shapley values for each client
         clients_SV = np.zeros(self.num_clients)
         for round in tqdm(range(1, self.num_rounds + 1), desc='Round'):
+            # if round < self.num_rounds:
+            #     continue
             self.init_round(round_=round)
             # Calculate for current round
             if type_ == "exact":
-                round_SV = self.calculate_round_exact_SV()
+                round_SV = self.calculate_round_exact_SV(round)
             elif type_ == "const_lambda":
                 self.init_round_MID(round_=round)
-                round_SV = self.calculate_round_const_lambda_SV()
+                round_SV = self.calculate_round_const_lambda_SV(round)
             elif type_ == "optimal_lambda":
                 self.init_round_MID(round_=round)
-                round_SV = self.calculate_round_optimal_lambda_SV()
+                round_SV = self.calculate_round_optimal_lambda_SV(round)
             clients_SV = clients_SV + round_SV
             print(round_SV.sum())
             # print(self.rnd_partitions)
-            print([self.utility_function([client_index]) for client_index in self.rnd_clients])
+            print([self.utility_function([client_index], round) for client_index in self.rnd_clients])
+            # print(round_SV)
+            # if round == self.num_rounds:
+            #     print(round_SV)
         return clients_SV

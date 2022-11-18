@@ -41,11 +41,15 @@ import numpy as np
 import os.path
 import ujson
 class TaskGen(BasicTaskGen):
-    def __init__(self, num_classes=10, dimension=30, dist_id = 0, num_clients = 30, skewness = 0.5, minvol=50, rawdata_path ='./benchmark/synthetic/data'):
+    def __init__(self, num_classes=10, dimension=30, dist_id = 0, num_clients = 30, skewness = 0.5, minvol=50, rawdata_path ='./benchmark/synthetic/data', num_samples=4200, zipf_skew=0.7, seed=0):
         super(TaskGen, self).__init__(benchmark='synthetic',
                                       dist_id=dist_id,
                                       skewness=skewness,
-                                      rawdata_path=rawdata_path)
+                                      rawdata_path=rawdata_path,
+                                      num_samples=num_samples,
+                                      zipf_skew=zipf_skew,
+                                      seed=seed
+                                      )
         self.dimension = dimension
         self.num_classes = num_classes
         self.num_clients = num_clients
@@ -168,8 +172,7 @@ class TaskGen(BasicTaskGen):
             """Zipf distribution and I.I.D"""
             W = [W_global for _ in range(num_clients)]
             b = [b_global for _ in range(num_clients)]
-            num_samples = 4200
-            samples_per_user = self.draw_zipf_distribution(self.num_clients, 0.7) * num_samples
+            samples_per_user = self.draw_zipf_distribution(self.num_clients, self.zipf_skew) * self.num_samples
             samples_per_user = np.array(samples_per_user, dtype=int)
         elif self.dist_id == 12:
             """Zipf distribution and non-I.I.D"""
@@ -178,8 +181,7 @@ class TaskGen(BasicTaskGen):
             b = [np.random.normal(Us[k], 1, self.num_classes) for k in range(num_clients)]
             B = np.random.normal(0, self.skewness, num_clients)
             for k in range(num_clients): V[k] = np.random.normal(B[k], 1, self.dimension)
-            num_samples = 4200
-            samples_per_user = self.draw_zipf_distribution(self.num_clients, 0.7) * num_samples
+            samples_per_user = self.draw_zipf_distribution(self.num_clients, self.zipf_skew) * self.num_samples
             samples_per_user = np.array(samples_per_user, dtype=int)
             
         X_split = [[] for _ in range(num_clients)]
