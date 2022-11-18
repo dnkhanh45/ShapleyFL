@@ -23,7 +23,7 @@ class MPBasicServer(BasicServer):
         """
         pool = mp.Pool(self.num_threads)
         logger.time_start('Total Time Cost')
-        for round in range(self.num_rounds+1):
+        for round in range(1, self.num_rounds + 1):
             print("--------------Round {}--------------".format(round))
             logger.time_start('Time Cost')
 
@@ -56,7 +56,7 @@ class MPBasicServer(BasicServer):
         # aggregate: pk = 1/K as default where K=len(selected_clients)
         device0 = torch.device(f"cuda:{self.server_gpu_id}")
         models = [i.to(device0) for i in models]
-        self.model = self.aggregate(models, p = [1.0 * self.client_vols[cid]/self.data_vol for cid in self.selected_clients])
+        self.model = self.aggregate(models, p = [1.0 * self.client_vols[cid] / self.data_vol for cid in self.selected_clients])
         return
 
     def communicate(self, selected_clients, pool):
@@ -84,7 +84,7 @@ class MPBasicServer(BasicServer):
             client_package: the reply from the client and will be 'None' if losing connection
         """
         
-        gpu_id = int(mp.current_process().name[-1]) - 1
+        gpu_id = int(mp.current_process().name.rsplit('-', 1)[1]) - 1
         gpu_id = gpu_id % self.gpus
 
         torch.manual_seed(0)
