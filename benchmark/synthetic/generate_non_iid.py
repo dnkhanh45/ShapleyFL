@@ -82,7 +82,7 @@ def generate(args):
     data = vars(args)
     data['clients'] = clients
     
-    filename = 'synthetic({},{}).json'.format(alpha, beta)
+    filename = 'synthetic({},{}){}.json'.format(alpha, beta, n_clients)
     with open(os.path.join('./data', filename), 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False)
     print('Saved at file named "{}"'.format(filename))

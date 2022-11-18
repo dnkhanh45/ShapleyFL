@@ -135,7 +135,7 @@ class ShapleyValueServer(MPBasicServer):
         for partition_index in np.unique(partitions):
             nodes_indexes = np.where(partitions == partition_index)[0]
             self.rnd_partitions.append(rnd_all_nodes[nodes_indexes])
-        print(cutcost / 960 / 120, end=' ')
+        print(cutcost / 960, end=' ')
         return
 
     
@@ -221,6 +221,6 @@ class ShapleyValueServer(MPBasicServer):
                 round_SV = self.calculate_round_optimal_lambda_SV()
             clients_SV = clients_SV + round_SV
             print(round_SV.sum())
-            print(self.rnd_partitions)
+            # print(self.rnd_partitions)
             print([self.utility_function([client_index]) for client_index in self.rnd_clients])
         return clients_SV

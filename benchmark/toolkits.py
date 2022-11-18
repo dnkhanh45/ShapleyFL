@@ -28,6 +28,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 ssl._create_default_https_context = ssl._create_unverified_context
 import importlib
+import matplotlib.pyplot as plt
 
 def set_random_seed(seed=0):
     """Set random seed"""
@@ -61,6 +62,8 @@ class BasicTaskGen:
         8: 'concept skew',
         9: 'concept and feature skew and balance',
         10: 'concept and feature skew and imbalance',
+        11: 'Zipf distribution with iid',
+        12: 'Zipf distribution with non-iid'
     }
     _TYPE_DATASET = ['2DImage', '3DImage', 'Text', 'Sequential', 'Graph', 'Tabular']
 
@@ -111,6 +114,8 @@ class BasicTaskGen:
         """Create the directories of the task."""
         taskname = self.get_taskname()
         taskpath = os.path.join(self.rootpath, taskname)
+        if not os.path.exists(self.rootpath):
+            os.mkdir(self.rootpath)
         os.mkdir(taskpath)
         os.mkdir(os.path.join(taskpath, 'record'))
 
@@ -161,6 +166,8 @@ class DefaultTaskGen(BasicTaskGen):
         print('Saving data...')
         self.save_info()
         self.save_data(train_cidxs, valid_cidxs)
+        # Visualizing partition
+        self.visualize_by_class(train_cidxs)
         print('Done.')
         return
 
@@ -343,6 +350,47 @@ class DefaultTaskGen(BasicTaskGen):
         with open(os.path.join(self.taskpath, 'data.json'), 'w') as outf:
             ujson.dump(feddata, outf)
         return
+    
+    def visualize_by_class(self, train_cidxs):
+        import collections
+        import matplotlib.pyplot as plt
+        import matplotlib.colors
+        import random
+        ax = plt.subplots()
+        colors = [key for key in matplotlib.colors.CSS4_COLORS.keys()]
+        random.shuffle(colors)
+        client_height = 1
+        if hasattr(self, 'dirichlet_dist'):
+            client_dist = self.dirichlet_dist.tolist()
+            data_columns = [sum(cprop) for cprop in client_dist]
+            row_map = {k:i for k,i in zip(np.argsort(data_columns), [_ for _ in range(self.num_clients)])}
+            for cid, cprop in enumerate(client_dist):
+                offset = 0
+                y_bottom = row_map[cid] - client_height/2.0
+                y_top = row_map[cid] + client_height/2.0
+                for lbi in range(len(cprop)):
+                    plt.fill_between([offset,offset+cprop[lbi]], y_bottom, y_top, facecolor = colors[lbi])
+                    # plt.barh(cid, cprop[lbi], client_height, left=offset, color=)
+                    offset += cprop[lbi]
+        else:
+            data_columns = [len(cidx) for cidx in train_cidxs]
+            row_map = {k:i for k,i in zip(np.argsort(data_columns), [_ for _ in range(self.num_clients)])}
+            for cid, cidxs in enumerate(train_cidxs):
+                labels = [int(self.train_data[did][-1]) for did in cidxs]
+                lb_counter = collections.Counter(labels)
+                offset = 0
+                y_bottom = row_map[cid] - client_height/2.0
+                y_top = row_map[cid] + client_height/2.0
+                for lbi in range(self.num_classes):
+                    plt.fill_between([offset,offset+lb_counter[lbi]], y_bottom, y_top, facecolor = colors[lbi])
+                    offset += lb_counter[lbi]
+        plt.xlim(0,max(data_columns))
+        plt.ylim(-0.5,len(train_cidxs)-0.5)
+        plt.ylabel('Client ID')
+        plt.xlabel('Number of Samples')
+        plt.title(self.get_taskname())
+        plt.savefig(os.path.join(self.taskpath, self.get_taskname()+'.jpg'))
+        plt.show()
 
 class BasicTaskCalculator:
 

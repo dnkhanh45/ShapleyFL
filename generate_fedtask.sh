@@ -1,3 +1,1 @@
-python generate_fedtask.py \
-    # --dataset synthetic \
-    # --num_clients 3
+python generate_fedtask.py --dataset synthetic --dist 11 --skew 0.0 --num_clients 10

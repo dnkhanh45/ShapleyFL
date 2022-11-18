@@ -1,5 +1,5 @@
 python main.py \
-    --task synthetic_cnum16_non_iid_00_00 \
+    --task synthetic_cnum10_dist11_skew0.0_seed0 \
     --model lr \
     --algorithm mp_fedavg \
     --num_rounds 200 \
@@ -10,5 +10,5 @@ python main.py \
     --proportion 1 \
     --batch_size 10 \
     --eval_interval 1 \
-    --gpu 0 \
-    --num_threads_per_gpu 8
+    --gpu 1 \
+    --num_threads_per_gpu 10
