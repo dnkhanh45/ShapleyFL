@@ -42,9 +42,9 @@ class ShapleyValueServer(MPBasicServer):
         selected_clients = [self.clients[index] for index in client_indexes_]
         models = [client.model for client in selected_clients]
         # weighted
-        # p = np.array([client.datavol for client in selected_clients])
+        p = np.array([client.datavol for client in selected_clients])
         # uniform
-        p = np.ones(len(selected_clients)) / len(selected_clients)
+        # p = np.ones(len(selected_clients)) / len(selected_clients)
         p = p / p.sum()
         self.model = self.aggregate(models=models, p=p)
         self.model.to(fmodule.device)

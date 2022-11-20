@@ -78,7 +78,7 @@ def setup_seed(seed):
 
 def initialize(option):
     # init fedtask
-    print("init fedtask...", end='')
+    print("init fedtask...")
     # dynamical initializing the configuration with the benchmark
     bmk_name = option['task'][:option['task'].find('cnum')-1].lower()
     bmk_model_path = '.'.join(['benchmark', bmk_name, 'model', option['model']])

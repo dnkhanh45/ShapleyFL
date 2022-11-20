@@ -49,8 +49,8 @@ class Server(MPBasicServer):
         # weighted
         p = [1.0 * self.client_vols[cid] / self.data_vol for cid in self.selected_clients]
         # uniform
-        p = np.ones(len(self.selected_clients)) / len(self.selected_clients)
-        p = p / p.sum()
+        # p = np.ones(len(self.selected_clients)) / len(self.selected_clients)
+        # p = p / p.sum()
         # self.model = self.aggregate(models, p = )
         self.model = self.aggregate(models, p=p)
         # Save global checkpoints
