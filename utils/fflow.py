@@ -104,6 +104,9 @@ def initialize(option):
     server_path = '%s.%s' % ('algorithm', option['algorithm'])
     server = getattr(importlib.import_module(server_path), 'Server')(option, utils.fmodule.Model().to(utils.fmodule.device), clients, test_data = test_data)
     print('done')
+    # print('Saving server model in round 0')``
+    # print(os.path.join(server.global_save_dir, 'Round0.pt'))
+    torch.save(server.model.state_dict(), os.path.join(server.global_save_dir, 'Round0.pt'))
     return server
 
 def output_filename(option, server):

@@ -1,5 +1,6 @@
 from torch import nn
 from utils.fmodule import FModule
+import torch
 
 class Model(FModule):
     def __init__(self, dim_in = 784, dim_out = 3):
@@ -8,7 +9,7 @@ class Model(FModule):
         self.layer.bias.data.zero_()
 
     def forward(self, x):
-        x = self.layer(x)
+        x = self.layer(torch.reshape(x,(-1, 784)))
         return x
 
 class Loss(nn.Module):

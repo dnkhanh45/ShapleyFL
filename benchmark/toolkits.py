@@ -67,7 +67,7 @@ class BasicTaskGen:
     }
     _TYPE_DATASET = ['2DImage', '3DImage', 'Text', 'Sequential', 'Graph', 'Tabular']
 
-    def __init__(self, benchmark, dist_id, skewness, rawdata_path, num_samples, zipf_skew, seed=0):
+    def __init__(self, benchmark, dist_id, skewness, rawdata_path, num_samples, zipf_skew=0.7, seed=0):
         self.benchmark = benchmark
         self.rootpath = './fedtask'
         self.rawdata_path = rawdata_path
@@ -169,7 +169,7 @@ class DefaultTaskGen(BasicTaskGen):
         self.save_info()
         self.save_data(train_cidxs, valid_cidxs)
         # Visualizing partition
-        self.visualize_by_class(train_cidxs)
+        # self.visualize_by_class(train_cidxs)
         print('Done.')
         return
 

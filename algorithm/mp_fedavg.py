@@ -32,6 +32,7 @@ class Server(MPBasicServer):
         :param
             t: the number of current round
         """
+
         # sample clients: MD sampling as default but with replacement=False
         self.selected_clients = self.sample()
         # training
