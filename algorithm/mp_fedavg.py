@@ -2,6 +2,7 @@ from .mp_fedbase import MPBasicServer, MPBasicClient
 import torch
 import os
 import numpy as np
+from tqdm.auto import tqdm
 
 class Server(MPBasicServer):
     def __init__(self, option, model, clients, test_data = None):
@@ -62,6 +63,53 @@ class Server(MPBasicServer):
 class Client(MPBasicClient):
     def __init__(self, option, name='', train_data=None, valid_data=None):
         super(Client, self).__init__(option, name, train_data, valid_data)
+
+    def train(self, model, device, log=False):
+        """
+        Standard local training procedure. Train the transmitted model with local training dataset.
+        :param
+            model: the global model
+            device: the device to be trained on
+        :return
+        """
+        model = model.to(device)
+        model.train()
+        
+        data_loader = self.calculator.get_data_loader(self.train_data, batch_size=self.batch_size)
+        optimizer = self.calculator.get_optimizer(self.optimizer_name, model, lr = self.learning_rate, weight_decay=self.weight_decay, momentum=self.momentum)
+        for iter in tqdm(range(self.epochs), desc='Training'):
+            for batch_id, batch_data in enumerate(data_loader):
+                model.zero_grad()
+                loss = self.calculator.get_loss(model, batch_data, device)
+                loss.backward()
+                optimizer.step()
+        return
+
+
+    def test(self, model, dataflag='valid', device='cpu'):
+        """
+        Evaluate the model with local data (e.g. training data or validating data).
+        :param
+            model:
+            dataflag: choose the dataset to be evaluated on
+        :return:
+            eval_metric: task specified evaluation metric
+            loss: task specified loss
+        """
+        dataset = self.train_data if dataflag=='train' else self.valid_data
+        model = model.to(device)
+        model.eval()
+        loss = 0
+        eval_metric = 0
+        data_loader = self.calculator.get_data_loader(dataset, batch_size=64)
+        for batch_id, batch_data in enumerate(data_loader):
+            bmean_eval_metric, bmean_loss = self.calculator.test(model, batch_data,device)
+            loss += bmean_loss * len(batch_data[1])
+            eval_metric += bmean_eval_metric * len(batch_data[1])
+        eval_metric = 1.0 * eval_metric / len(dataset)
+        loss = 1.0 * loss / len(dataset)
+        return eval_metric, loss
+
 
     def reply(self, svr_pkg, device):
         """

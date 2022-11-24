@@ -1,7 +1,10 @@
+cd ..
 python central_sv.py \
-    --task synthetic_cnum16_dist11_skew1.0_seed1 \
+    --task synthetic_cnum16_dist12_skew1.0_seed1 \
     --model lr \
     --algorithm mp_fedavg \
-    --num_rounds 200 \
-    --proportion 1 \
-    --gpu 1
+    --num_epochs 4 \
+    --batch_size 10 \
+    --gpu 0 \
+    --start 0 \
+    --end 1

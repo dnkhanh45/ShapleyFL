@@ -64,6 +64,10 @@ def read_option():
     
     # server gpu
     parser.add_argument('--server_gpu_id', help='server process on this gpu', type=int, default=0)
+
+    # central SV
+    parser.add_argument('--start', help='Id of start subset', type=int, default=0)
+    parser.add_argument('--end', help='Id of end subset', type=int, default=-1)
     
     try: option = vars(parser.parse_args())
     except IOError as msg: parser.error(str(msg))
