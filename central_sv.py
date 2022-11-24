@@ -11,6 +11,7 @@ from bitsets import bitset
 def main():
     option = flw.read_option()
     option['num_gpus'] = len(option['gpu'])
+    print(str(option['gpu'][0]))
     os.environ['CUDA_VISIBLE_DEVICES'] = str(option['gpu'][0])
 
     bmk_name = option['task'][:option['task'].find('cnum')-1].lower()
@@ -44,9 +45,12 @@ def main():
             if (i < start) or (i >= end):
                 i += 1
                 continue
+            i += 1
             print('Subset:', list(subset_clients_indices))
             chkpts_filename = '{}.pt'.format(BITSET(subset_clients_indices).bits())
             print('Checkpoints filename: {}'.format(chkpts_filename))
+            if os.path.exists(os.path.join(save_chkpts, chkpts_filename)):
+                continue
             client.train_data = ConcatDataset([train_datas[index] for index in subset_clients_indices])
             client.valid_data = ConcatDataset([valid_datas[index] for index in subset_clients_indices])
             client.train(model, utils.fmodule.device)
@@ -54,7 +58,6 @@ def main():
                 model.state_dict(),
                 os.path.join(save_chkpts, chkpts_filename)
             )
-            i += 1
     return
             
 if __name__ == '__main__':

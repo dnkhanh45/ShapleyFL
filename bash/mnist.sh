@@ -1,9 +1,9 @@
 python main.py \
-    --task mnist_cnum16_dist2_skew1.0_seed0 \
-    --model cnn \
+    --task mnist_cnum50_dist0_skew0_seed0 \
+    --model mlp \
     --algorithm mp_fedavg \
-    --num_rounds 200 \
-    --num_epochs 5 \
+    --num_rounds 450 \
+    --num_epochs 10 \
     --learning_rate 0.01 \
     --lr_scheduler 0 \
     --learning_rate_decay 0.998 \

@@ -9,7 +9,7 @@ __pycache__/
 /utils/figures/
 # *.txt
 test*
-*.pt
+# *.pt
 *.gz
 *-ubyte
-/chkpts/
+chkpts/
