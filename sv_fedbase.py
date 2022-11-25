@@ -9,6 +9,7 @@ from utils import fmodule
 import itertools
 from tqdm.auto import tqdm
 import random
+import pickle
 
 CPU = torch.device('cpu')
 
@@ -49,7 +50,8 @@ class ShapleyValueServer(MPBasicServer):
         self.model = self.aggregate(models=models, p=p)
         self.model.to(fmodule.device)
         acc, loss = self.test()
-        self.rnd_dict[bitset_key] = acc / pow(round, 2)
+        # self.rnd_dict[bitset_key] = acc / pow(round, 2)
+        self.rnd_dict[bitset_key] = acc
         return self.rnd_dict[bitset_key]
 
     
@@ -162,23 +164,22 @@ class ShapleyValueServer(MPBasicServer):
         return self.utility_function(intersection, round)
 
     
-    def calculate_round_optimal_lambda_SV(self, round):
+    def calculate_round_optimal_lambda_SV(self, round, number_of_samples_):
         # Calculate A_matrix and b_vector
-        NUMBER_OF_SAMPLES = 30
         A_matrix = np.zeros((self.num_partitions, self.num_partitions))
         b_vector = np.zeros(self.num_partitions)
         all_rnd_subsets = list(itertools.chain.from_iterable(
             itertools.combinations(self.rnd_clients, _) for _ in range(len(self.rnd_clients) + 1)
         ))
         random.shuffle(all_rnd_subsets)
-        for k in range(NUMBER_OF_SAMPLES):
+        for k in range(number_of_samples_):
             subset = all_rnd_subsets[k]
             for i in range(self.num_partitions):
                 b_vector[i] += self.sub_utility_function(
                     partition_index_=i,
                     client_indexes_=subset,
                     round = round
-                ) * self.utility_function(subset)
+                ) * self.utility_function(subset, round)
                 for j in range(i, self.num_partitions):
                     A_matrix[i, j] += self.sub_utility_function(
                         partition_index_=i,
@@ -186,11 +187,12 @@ class ShapleyValueServer(MPBasicServer):
                         round=round
                     ) * self.sub_utility_function(
                         partition_index_=j,
-                        client_indexes_=subset
+                        client_indexes_=subset,
+                        round=round
                     )
                     A_matrix[j, i] = A_matrix[i, j]
-        A_matrix = A_matrix / NUMBER_OF_SAMPLES
-        b_vector = b_vector / NUMBER_OF_SAMPLES
+        A_matrix = A_matrix / number_of_samples_
+        b_vector = b_vector / number_of_samples_
 
         # Calculate optimal lambda
         optimal_lambda = np.linalg.inv(A_matrix) @ b_vector
@@ -202,37 +204,44 @@ class ShapleyValueServer(MPBasicServer):
                 if client_index in self.rnd_partitions[m]:
                     round_SV[client_index] += self.shapley_value(
                         client_index_=client_index,
-                        client_indexes_=self.rnd_partitions[m]
+                        client_indexes_=self.rnd_partitions[m],
+                        round=round
                     ) * optimal_lambda[m]
         return round_SV
 
 
-    def calculate_FL_SV(self, type_):
+    def calculate_FL_SV(self, type_, number_of_samples_=30):
         # Check constraints
         assert type_ in ["exact", "const_lambda", "optimal_lambda"], "Wrong type of calculating Shapley values!"
         if type_ == "exact" and self.clients_per_round > 16:
             raise ValueError("TLE!")
 
+        SV_save_dir = os.path.join('./SV_result', self.option['task'])
+        os.makedirs(SV_save_dir, exist_ok=True)
+        if type_ == "optimal_lambda":
+            saved_filename = '{}-{}.npy'.format(type_, number_of_samples_)
+        else:
+            saved_filename = '{}.npy'.format(type_)
         # Calculate Shapley values for each client
-        clients_SV = np.zeros(self.num_clients)
-        for round in tqdm(range(1, self.num_rounds + 1), desc='Round'):
-            # if round < self.num_rounds:
-            #     continue
+        clients_SV = list()
+        for round in tqdm(range(1, self.num_rounds + 1)):
+        # for round in range(1, 2):
             self.init_round(round_=round)
             # Calculate for current round
             if type_ == "exact":
                 round_SV = self.calculate_round_exact_SV(round)
+                with open(os.path.join(SV_save_dir, 'Round{}{}'.format(round, saved_filename)), 'wb') as f:
+                    pickle.dump(round_SV, f)
             elif type_ == "const_lambda":
                 self.init_round_MID(round_=round)
                 round_SV = self.calculate_round_const_lambda_SV(round)
             elif type_ == "optimal_lambda":
                 self.init_round_MID(round_=round)
-                round_SV = self.calculate_round_optimal_lambda_SV(round)
-            clients_SV = clients_SV + round_SV
+                round_SV = self.calculate_round_optimal_lambda_SV(round, number_of_samples_)
+            clients_SV.append(round_SV.tolist())
             print(round_SV.sum())
-            # print(self.rnd_partitions)
-            print([self.utility_function([client_index], round) for client_index in self.rnd_clients])
-            # print(round_SV)
-            # if round == self.num_rounds:
-            #     print(round_SV)
+        clients_SV = np.array(clients_SV)
+        if type_ in ["const_lambda", "optimal_lambda"]:
+            with open(os.path.join(SV_save_dir, saved_filename), 'wb') as f:
+                pickle.dump(clients_SV, f)
         return clients_SV
