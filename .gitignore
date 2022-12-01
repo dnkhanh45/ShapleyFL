@@ -13,3 +13,5 @@ test*
 *.gz
 *-ubyte
 chkpts/
+/wandb/
+/SV_result/

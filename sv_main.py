@@ -7,7 +7,6 @@ def main():
     # read options
     option = flw.read_option()
     option['num_gpus'] = len(option['gpu'])
-    print(option)
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu_id) for gpu_id in option['gpu']])
     print('=' * 100)
     os.environ['MASTER_ADDR'] = "localhost"
@@ -20,8 +19,8 @@ def main():
     server = ShapleyValueServer(server=server, num_partitions=2)
     # calculate SV
     # type_ in ["exact", "const_lambda", "optimal_lambda"]
-    clients_SV = server.calculate_FL_SV(type_="exact", number_of_samples_=300)
-    # print(clients_SV)
+    server.calculate_FL_SV(type_=option['method'], number_of_samples_=300)
+    
 
 if __name__ == '__main__':
     main()

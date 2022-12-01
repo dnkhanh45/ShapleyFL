@@ -124,6 +124,7 @@ class BasicTaskGen:
     def _check_task_exist(self):
         """Check whether the task already exists."""
         taskname = self.get_taskname()
+        print(taskname)
         return os.path.exists(os.path.join(self.rootpath, taskname))
 
 class DefaultTaskGen(BasicTaskGen):
@@ -284,6 +285,7 @@ class DefaultTaskGen(BasicTaskGen):
                 minv = np.min(proportions * len(self.train_data))
             proportions = (np.cumsum(proportions) * len(d_idxs)).astype(int)[:-1]
             local_datas  = np.split(d_idxs, proportions)
+            
         return local_datas
 
     def local_holdout(self, local_datas, rate=0.8, shuffle=False):

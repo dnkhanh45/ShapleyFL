@@ -19,6 +19,14 @@ class Model(FModule):
         x = F.relu(x)
         x = self.fc3(x)
         return x
+    
+    def init_weights(self):
+        nn.init.xavier_uniform_(self.fc1.weight)
+        nn.init.zeros_(self.fc1.bias)
+        nn.init.xavier_uniform_(self.fc2.weight)
+        nn.init.zeros_(self.fc2.bias)
+        nn.init.xavier_uniform_(self.fc3.weight)
+        nn.init.zeros_(self.fc3.bias)
 
 
 class Loss(nn.Module):

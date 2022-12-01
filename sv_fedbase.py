@@ -172,6 +172,7 @@ class ShapleyValueServer(MPBasicServer):
             itertools.combinations(self.rnd_clients, _) for _ in range(len(self.rnd_clients) + 1)
         ))
         random.shuffle(all_rnd_subsets)
+        number_of_samples_ = min(len(all_rnd_subsets), number_of_samples_)
         for k in range(number_of_samples_):
             subset = all_rnd_subsets[k]
             for i in range(self.num_partitions):
@@ -216,32 +217,32 @@ class ShapleyValueServer(MPBasicServer):
         if type_ == "exact" and self.clients_per_round > 16:
             raise ValueError("TLE!")
 
-        SV_save_dir = os.path.join('./SV_result', self.option['task'])
-        os.makedirs(SV_save_dir, exist_ok=True)
+        sv_savedir = os.path.join(self.option['log_folder'], self.option['task'], self.option['method'])
+        os.makedirs(sv_savedir, exist_ok=True)
         if type_ == "optimal_lambda":
             saved_filename = '{}-{}.npy'.format(type_, number_of_samples_)
         else:
             saved_filename = '{}.npy'.format(type_)
         # Calculate Shapley values for each client
         clients_SV = list()
-        for round in tqdm(range(1, self.num_rounds + 1)):
-        # for round in range(1, 2):
+        for round in tqdm(range(self.option['start'], self.option['end'])):
             self.init_round(round_=round)
             # Calculate for current round
             if type_ == "exact":
                 round_SV = self.calculate_round_exact_SV(round)
-                with open(os.path.join(SV_save_dir, 'Round{}{}'.format(round, saved_filename)), 'wb') as f:
-                    pickle.dump(round_SV, f)
+                # with open(os.path.join(sv_savedir, 'Round{}{}'.format(round, saved_filename)), 'wb') as f:
+                #     pickle.dump(round_SV, f)
             elif type_ == "const_lambda":
                 self.init_round_MID(round_=round)
                 round_SV = self.calculate_round_const_lambda_SV(round)
+                # with open(os.path.join(sv_savedir, 'Round{}{}'.format(round, saved_filename)), 'wb') as f:
+                #     pickle.dump(round_SV, f)
             elif type_ == "optimal_lambda":
                 self.init_round_MID(round_=round)
                 round_SV = self.calculate_round_optimal_lambda_SV(round, number_of_samples_)
             clients_SV.append(round_SV.tolist())
             print(round_SV.sum())
         clients_SV = np.array(clients_SV)
-        if type_ in ["const_lambda", "optimal_lambda"]:
-            with open(os.path.join(SV_save_dir, saved_filename), 'wb') as f:
-                pickle.dump(clients_SV, f)
-        return clients_SV
+        # if type_ in ["const_lambda", "optimal_lambda"]:
+        with open(os.path.join(sv_savedir, saved_filename), 'wb') as f:
+            pickle.dump(clients_SV, f)

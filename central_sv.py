@@ -11,7 +11,6 @@ from bitsets import bitset
 def main():
     option = flw.read_option()
     option['num_gpus'] = len(option['gpu'])
-    print(str(option['gpu'][0]))
     os.environ['CUDA_VISIBLE_DEVICES'] = str(option['gpu'][0])
 
     bmk_name = option['task'][:option['task'].find('cnum')-1].lower()
@@ -27,10 +26,9 @@ def main():
     path = '%s.%s' % ('algorithm', option['algorithm'])
     Client=getattr(importlib.import_module(path), 'Client')
     client = Client(option, name = client_names[0], train_data = train_datas[0], valid_data = valid_datas[0])
-    model = utils.fmodule.Model()
 
-    save_chkpts = os.path.join('./central_chkpts', option['task'])
-    os.makedirs(save_chkpts, exist_ok=True)
+    save_dir = os.path.join('./central_acc', option['task'])
+    os.makedirs(save_dir, exist_ok=True)
         
     all_clients_indices = tuple(range(len(client_names)))
     BITSET = bitset('clients_indices_bitset', all_clients_indices)
@@ -46,18 +44,23 @@ def main():
                 i += 1
                 continue
             i += 1
-            print('Subset:', list(subset_clients_indices))
-            chkpts_filename = '{}.pt'.format(BITSET(subset_clients_indices).bits())
-            print('Checkpoints filename: {}'.format(chkpts_filename))
-            if os.path.exists(os.path.join(save_chkpts, chkpts_filename)):
+            save_filename = '{}.txt'.format(BITSET(subset_clients_indices).bits())
+            if os.path.exists(os.path.join(save_dir, save_filename)):
                 continue
+            # if BITSET(subset_clients_indices).bits() != '000110':
+            #     continue
+            print('Subset:', list(subset_clients_indices))
+            print('Save filename: {}'.format(save_filename))
             client.train_data = ConcatDataset([train_datas[index] for index in subset_clients_indices])
             client.valid_data = ConcatDataset([valid_datas[index] for index in subset_clients_indices])
-            client.train(model, utils.fmodule.device)
-            torch.save(
-                model.state_dict(),
-                os.path.join(save_chkpts, chkpts_filename)
-            )
+            print('Number of train samples: {}; Number of validate samples: {}'.format(client.train_data.__len__(), client.valid_data.__len__()))
+            torch.manual_seed(option['seed'])
+            model = utils.fmodule.Model()
+            model.init_weights()
+            acc = client.custom_train(model, utils.fmodule.device, test_data)
+            print('Accuracy: {}'.format(acc))
+            with open(os.path.join(save_dir, save_filename), 'w') as f:
+                f.write(str(acc))
     return
             
 if __name__ == '__main__':

@@ -17,6 +17,7 @@ def read_option():
 
 if __name__ == '__main__':
     option = read_option()
+    print(option['skew'])
     TaskGen = getattr(importlib.import_module('.'.join(['benchmark', option['dataset'], 'core'])), 'TaskGen')
     if option['dataset'] == 'synthetic':
         generator = TaskGen(dist_id = option['dist'], skewness = option['skew'], num_clients=option['num_clients'], num_samples=option['num_samples'], zipf_skew=option['zipf_skew'], seed=option['seed'])

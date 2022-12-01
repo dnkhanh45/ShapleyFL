@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import os
 import multiprocessing
+import wandb
 
 class MyLogger(flw.Logger):
     def log(self, server=None):
@@ -40,6 +41,12 @@ class MyLogger(flw.Logger):
         print('+++++++++++++++++++')
         print(self.temp.format("Testing Accuracy:", self.output['test_accs'][-1]))
         print('+++++++++++++++++++')
+        wandb.log({
+            "Training Loss": self.output['train_losses'][-1],
+            "Testing Loss": self.output['test_losses'][-1],
+            "Testing Accuracy": self.output['test_accs'][-1],
+            "Validating Accuracy": self.output['mean_valid_accs'][-1]
+        }, step=self.current_round)
         # print(self.temp.format("Validating Accuracy:", self.output['mean_valid_accs'][-1]))
         # print(self.temp.format("Mean of Client Accuracy:", self.output['mean_curve'][-1]))
         # print(self.temp.format("Std of Client Accuracy:", self.output['var_curve'][-1]))
@@ -52,7 +59,18 @@ def main():
     # read options
     option = flw.read_option()
     option['num_gpus'] = len(option['gpu'])
-    print(option)
+
+    wandb.init(
+        project='ShapleyValue',
+        group=f"{option['task'].split('_')[0]}",
+        name=f"{option['task']}",
+        config={
+            "learning_rate": option['learning_rate'],
+            "model": f"{option['model']}",
+            "num_rounds": f"{option['num_rounds']}",
+        }
+    )
+    
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu_id) for gpu_id in option['gpu']])
     print('=' * 100)
     os.environ['MASTER_ADDR'] = "localhost"
@@ -62,13 +80,9 @@ def main():
     flw.setup_seed(option['seed'])
     # initialize server
     server = flw.initialize(option)
-    # for key, value in server.__dict__.items():
-    #     print(key)
-    #     print('\t', value)
-    #     print('-' * 100)
-    # print(len(server.test_data))
-    # start federated optimization
     server.run()
+    
+    wandb.finish()
 
 if __name__ == '__main__':
     main()
