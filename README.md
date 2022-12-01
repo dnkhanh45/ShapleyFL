@@ -54,3 +54,8 @@ pip install networkx
 ```
 pip install bitset
 ```
+
+### Chay thi nghiem
+
+- Chay thi nghiem tinh Shapley Value cho truong hop IID tai `bash\run_iid`
+- Chay thi nghiem tinh Shalpey Vale cho truong hop Non IID tai `bash\run_noniid`
