@@ -1,9 +1,16 @@
-# python generate_fedtask.py --dataset mnist --dist 0 --skew 0 --num_clients 100
-# python generate_fedtask.py --dataset mnist --dist 1 --skew 0.8 --num_clients 10
-# python generate_fedtask.py --dataset mnist --dist 2 --skew 0.8 --num_clients 10
-# python generate_fedtask.py --dataset synthetic --dist 12 --skew 1 --num_clients 16 --num_samples 2400 --zipf_skew 1.6 --seed 1
-python generate_fedtask.py --dataset mnist --dist 6 --skew 0.6 --num_clients 16 --zipf_skew 1.6 --seed 0
-python generate_fedtask.py --dataset cifar10 --dist 6 --skew 0.6 --num_clients 16 --zipf_skew 1.6 --seed 0
-python generate_fedtask.py --dataset mnist --dist 2 --skew 0.6 --num_clients 16 --zipf_skew 1.6 --seed 0
-python generate_fedtask.py --dataset cifar10 --dist 2 --skew 0.6 --num_clients 16 --zipf_skew 1.6 --seed 0
-# python generate_fedtask.py --dataset fashion_mnist --dist 6 --skew 0.5 --num_clients 16 --zipf_skew 1.6 --seed 0
+#!/bin/bash
+source /etc/profile.d/modules.sh
+module load gcc/11.2.0
+module load openmpi/4.1.3
+module load cuda/11.5/11.5.2
+module load cudnn/8.3/8.3.3
+module load nccl/2.11/2.11.4-1
+module load python/3.10/3.10.4
+source ~/venv/pytorch1.11+horovod/bin/activate
+
+python generate_fedtask.py --dataset cifar10 --dist 2 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --dataset cifar10 --dist 6 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --dataset cifar10 --dist 0 --skew 0 --num_clients 50 --seed 0
+python generate_fedtask.py --dataset mnist --dist 2 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --dataset mnist --dist 6 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --dataset mnist --dist 0 --skew 0 --num_clients 50 --seed 0

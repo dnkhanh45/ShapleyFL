@@ -64,6 +64,7 @@ def read_option():
     
     # server gpu
     parser.add_argument('--server_gpu_id', help='server process on this gpu', type=int, default=0)
+    parser.add_argument('--fedtask_folder', help="folder to write results", type=str, default='fedtask')
 
     # central SV
     parser.add_argument('--log_folder', help='Store experiment files', type=str, default=None)
@@ -93,7 +94,7 @@ def initialize(option):
     utils.fmodule.TaskCalculator = getattr(importlib.import_module(bmk_core_path), 'TaskCalculator')
     utils.fmodule.TaskCalculator.setOP(getattr(importlib.import_module('torch.optim'), option['optimizer']))
     utils.fmodule.Model = getattr(importlib.import_module(bmk_model_path), 'Model')
-    task_reader = getattr(importlib.import_module(bmk_core_path), 'TaskReader')(taskpath=os.path.join('fedtask', option['task']))
+    task_reader = getattr(importlib.import_module(bmk_core_path), 'TaskReader')(taskpath=os.path.join(option['fedtask_folder'], option['task']))
     train_datas, valid_datas, test_data, client_names = task_reader.read_data()
     num_clients = len(client_names)
     print("done")

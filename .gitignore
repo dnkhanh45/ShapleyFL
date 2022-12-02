@@ -4,7 +4,7 @@ __pycache__/
 /algorithm/fedrl_utils/baseline
 /algorithm/kd_utils/
 /benchmark/
-fedtask/
+/fedtask/
 .vscode*
 /utils/figures/
 # *.txt

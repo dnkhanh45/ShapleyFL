@@ -1,8 +1,9 @@
-# Cac thu vien can dung:
+# Required libraries:
 - METIS
 - NetworkX
-- Bitset
+- Bitsets
 ## METIS:
+### Install METIS package:
 1) Make sure the environment has `gcc` and `cmake`.\
    If not:\
    a) Install `gcc`:
@@ -50,12 +51,45 @@ pip install metis
 ```
 pip install networkx
 ```
-## Bitset
+## Bitsets
 ```
-pip install bitset
+pip install bitsets
 ```
 
-### Chay thi nghiem
-
-- Chay thi nghiem tinh Shapley Value cho truong hop IID tai `bash\run_iid`
-- Chay thi nghiem tinh Shalpey Vale cho truong hop Non IID tai `bash\run_noniid`
+# Run experiments:
+1) Generate fedtask:
+```
+bash ./script/gen_task/gen_data.sh
+```
+2) Train:\
+Run independently:
+```
+bash ./script/run_exp/cifar10/train16_iid.sh
+bash ./script/run_exp/cifar10/train16_noniid.sh
+bash ./script/run_exp/cifar10/train50_iid.sh
+bash ./script/run_exp/mnist/train16_iid.sh
+bash ./script/run_exp/mnist/train16_noniid.sh
+bash ./script/run_exp/mnist/train50_iid.sh
+```
+3) Calculate Shapley values:\
+Run independently:
+```
+bash ./script/run_sv/cifar10/sv16_iid_const.sh
+bash ./script/run_sv/cifar10/sv16_iid_exact.sh
+bash ./script/run_sv/cifar10/sv16_iid_opt.sh
+bash ./script/run_sv/cifar10/sv16_noniid_const.sh
+bash ./script/run_sv/cifar10/sv16_noniid_exact.sh
+bash ./script/run_sv/cifar10/sv16_noniid_opt.sh
+bash ./script/run_sv/cifar10/sv50_iid_const.sh
+bash ./script/run_sv/cifar10/sv50_iid_exact.sh
+bash ./script/run_sv/cifar10/sv50_iid_opt.sh
+bash ./script/run_sv/mnist/sv16_iid_const.sh
+bash ./script/run_sv/mnist/sv16_iid_exact.sh
+bash ./script/run_sv/mnist/sv16_iid_opt.sh
+bash ./script/run_sv/mnist/sv16_noniid_const.sh
+bash ./script/run_sv/mnist/sv16_noniid_exact.sh
+bash ./script/run_sv/mnist/sv16_noniid_opt.sh
+bash ./script/run_sv/mnist/sv50_iid_const.sh
+bash ./script/run_sv/mnist/sv50_iid_exact.sh
+bash ./script/run_sv/mnist/sv50_iid_opt.sh
+```
