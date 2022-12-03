@@ -8,9 +8,9 @@ module load nccl/2.11/2.11.4-1
 module load python/3.10/3.10.4
 source ~/venv/pytorch1.11+horovod/bin/activate
 
-python generate_fedtask.py --dataset cifar10 --dist 2 --skew 0.6 --num_clients 16 --seed 0
-python generate_fedtask.py --dataset cifar10 --dist 6 --skew 0.6 --num_clients 16 --seed 0
-python generate_fedtask.py --dataset cifar10 --dist 0 --skew 0 --num_clients 50 --seed 0
-python generate_fedtask.py --dataset mnist --dist 2 --skew 0.6 --num_clients 16 --seed 0
-python generate_fedtask.py --dataset mnist --dist 6 --skew 0.6 --num_clients 16 --seed 0
-python generate_fedtask.py --dataset mnist --dist 0 --skew 0 --num_clients 50 --seed 0
+python generate_fedtask.py --benchmark cifar10_classification --dist 2 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --benchmark cifar10_classification --dist 6 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --benchmark cifar10_classification --dist 0 --skew 0 --num_clients 50 --seed 0
+python generate_fedtask.py --benchmark mnist --dist 2 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --benchmark mnist --dist 6 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --benchmark mnist --dist 0 --skew 0 --num_clients 50 --seed 0

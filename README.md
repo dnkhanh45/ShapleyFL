@@ -57,39 +57,6 @@ pip install bitsets
 ```
 
 # Run experiments:
-1) Generate fedtask:
 ```
-bash ./script/gen_task/gen_data.sh
-```
-2) Train:\
-Run independently:
-```
-bash ./script/run_exp/cifar10/train16_iid.sh
-bash ./script/run_exp/cifar10/train16_noniid.sh
-bash ./script/run_exp/cifar10/train50_iid.sh
-bash ./script/run_exp/mnist/train16_iid.sh
-bash ./script/run_exp/mnist/train16_noniid.sh
-bash ./script/run_exp/mnist/train50_iid.sh
-```
-3) Calculate Shapley values:\
-Run independently:
-```
-bash ./script/run_sv/cifar10/sv16_iid_const.sh
-bash ./script/run_sv/cifar10/sv16_iid_exact.sh
-bash ./script/run_sv/cifar10/sv16_iid_opt.sh
-bash ./script/run_sv/cifar10/sv16_noniid_const.sh
-bash ./script/run_sv/cifar10/sv16_noniid_exact.sh
-bash ./script/run_sv/cifar10/sv16_noniid_opt.sh
-bash ./script/run_sv/cifar10/sv50_iid_const.sh
-bash ./script/run_sv/cifar10/sv50_iid_exact.sh
-bash ./script/run_sv/cifar10/sv50_iid_opt.sh
-bash ./script/run_sv/mnist/sv16_iid_const.sh
-bash ./script/run_sv/mnist/sv16_iid_exact.sh
-bash ./script/run_sv/mnist/sv16_iid_opt.sh
-bash ./script/run_sv/mnist/sv16_noniid_const.sh
-bash ./script/run_sv/mnist/sv16_noniid_exact.sh
-bash ./script/run_sv/mnist/sv16_noniid_opt.sh
-bash ./script/run_sv/mnist/sv50_iid_const.sh
-bash ./script/run_sv/mnist/sv50_iid_exact.sh
-bash ./script/run_sv/mnist/sv50_iid_opt.sh
+bash ./script/run_remote/cifar10_classification_cnum6_dist2_skew0.6_seed0.sh
 ```

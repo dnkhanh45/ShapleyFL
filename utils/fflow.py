@@ -75,6 +75,10 @@ def read_option():
     parser.add_argument('--start', help='Id of start subset', type=int, default=0)
     parser.add_argument('--end', help='Id of end subset', type=int, default=-1)
     parser.add_argument('--method', help='How to calculate SV', type=str)
+    # remote run
+    parser.add_argument('--fedtask_path', help='the path of fedtask', type=str, default='fedtask')
+    parser.add_argument('--data_path', help='the path of data', type=str)
+    
     try: option = vars(parser.parse_args())
     except IOError as msg: parser.error(str(msg))
     return option
@@ -109,7 +113,10 @@ def initialize(option):
     # init partitioned dataset
     TaskPipe = getattr(importlib.import_module(bmk_core_path), 'TaskPipe')
     TaskPipe.set_option(option['cross_validation'], option['train_on_all'])
-    train_datas, valid_datas, test_data, client_names = TaskPipe.load_task(os.path.join('fedtask', option['task']))
+    train_datas, valid_datas, test_data, client_names = TaskPipe.load_task(
+        task_path=os.path.join(option['fedtask_path'], option['task']),
+        data_path=option['data_path']
+    )
     # init model
     try:
         utils.fmodule.Model = getattr(importlib.import_module(bmk_model_path), 'Model')

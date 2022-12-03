@@ -620,7 +620,7 @@ class BasicTaskPipe:
     _cross_validation = False
     _train_on_all = False
     @classmethod
-    def load_task(cls, task_path):
+    def load_task(cls, task_path, data_path=None):
         """
             Reading the spilted dataset from disk files and loading data into the class 'LocalDataset'.
             This algorithm should read three types of data from the processed task:
@@ -715,7 +715,7 @@ class XYTaskPipe(BasicTaskPipe):
             ujson.dump(feddata, outf)
 
     @classmethod
-    def load_task(cls, task_path):
+    def load_task(cls, task_path, data_path=None):
         with open(os.path.join(task_path, 'data.json'), 'r') as inf:
             feddata = ujson.load(inf)
         test_data = cls.TaskDataset(feddata['dtest']['x'], feddata['dtest']['y'])
@@ -780,14 +780,14 @@ class IDXTaskPipe(BasicTaskPipe):
         return
 
     @classmethod
-    def load_task(cls, task_path):
+    def load_task(cls, task_path, data_path=None):
         with open(os.path.join(task_path, 'data.json'), 'r') as inf:
             feddata = ujson.load(inf)
         class_path = feddata['datasrc']['class_path']
         class_name = feddata['datasrc']['class_name']
         origin_class = getattr(importlib.import_module(class_path), class_name)
-        origin_train_data = cls.args_to_dataset(origin_class, feddata['datasrc']['train_args'])
-        origin_test_data = cls.args_to_dataset(origin_class, feddata['datasrc']['test_args'])
+        origin_train_data = cls.args_to_dataset(origin_class, feddata['datasrc']['train_args'], data_path)
+        origin_test_data = cls.args_to_dataset(origin_class, feddata['datasrc']['test_args'], data_path)
         test_data = cls.TaskDataset(origin_test_data, [_ for _ in range(len(origin_test_data))])
         train_datas = []
         valid_datas = []
@@ -808,9 +808,11 @@ class IDXTaskPipe(BasicTaskPipe):
         return train_datas, valid_datas, test_data, feddata['client_names']
 
     @classmethod
-    def args_to_dataset(cls, original_class, args):
+    def args_to_dataset(cls, original_class, args, data_path=None):
         if not isinstance(args, dict):
             raise TypeError
+        if data_path:
+            args['root'] = '"' + data_path + '"'
         args_str = '(' + ','.join([key + '=' + value for key, value in args.items()]) + ')'
         return eval("original_class" + args_str)
 
@@ -864,7 +866,7 @@ class XTaskPipe(BasicTaskPipe):
         return
 
     @classmethod
-    def load_task(cls, task_path):
+    def load_task(cls, task_path, data_path=None):
         with open(os.path.join(task_path, 'data.json'), 'r') as inf:
             feddata = ujson.load(inf)
         test_data = cls.TaskDataset(feddata['dtest']['x'])

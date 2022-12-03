@@ -1,6 +1,28 @@
+#!/bin/bash
+#$ -cwd
+#$ -l rt_G.small=1
+#$ -l h_rt=36:00:00
+#$ -o /home/aaa10078nj/Federated_Learning/Shapley_value/logs/$JOB_NAME_$JOB_ID.log
+#$ -j y
+
+source /etc/profile.d/modules.sh
+module load gcc/11.2.0
+module load openmpi/4.1.3
+module load cuda/11.5/11.5.2
+module load cudnn/8.3/8.3.3
+module load nccl/2.11/2.11.4-1
+module load python/3.10/3.10.4
+source ~/venv/pytorch1.11+horovod/bin/activate
+
+LOG_DIR="/home/aaa10078nj/Federated_Learning/Shapley_value/logs/cifar10/$JOB_NAME_$JOB_ID"
+rm -r ${LOG_DIR}
+mkdir ${LOG_DIR}
+
+# GPU variables
 GPU_IDS=( 1 )
 NUM_THREADS=1
 BATCH_SIZE=10
+
 # Generate fedtask
 python generate_fedtask.py \
     --benchmark cifar10_classification \
@@ -12,7 +34,7 @@ python generate_fedtask.py \
 # Run
 TASK="cifar10_classification_cnum6_dist2_skew0.6_seed0"
 
-ROOT_PATH="./tmp"
+ROOT_PATH="$SGE_LOCALDIR/$JOB_ID/"
 mkdir $ROOT_PATH
 
 DATA_PATH="$ROOT_PATH/data"

@@ -8,12 +8,29 @@ module load nccl/2.11/2.11.4-1
 module load python/3.10/3.10.4
 source ~/venv/pytorch1.11+horovod/bin/activate
 
-TASK="cifar10_cnum16_dist2_skew0.6_seed0"
+TASK="cifar10_cnum6_dist2_skew0.6_seed0"
 #Dataset
-ROOT_DIR="$SGE_LOCALDIR/$JOB_ID/"
-FEDTASK_DIR="$ROOT_DIR/fedtask"
-mkdir $FEDTASK_DIR
-# cp -r ./benchmark/cifar10/data ${DATA_DIR}
-cp -r ./fedtask/$TASK ${FEDTASK_DIR}
+ROOT_PATH="$SGE_LOCALPATH/$JOB_ID/"
+DATA_PATH="$ROOT_PATH/data"
+mkdir $DATA_PATH
+cp -r ./benchmark/RAW_DATA/CIFAR10 ${DATA_PATH}
+FEDTASK_PATH="$ROOT_PATH/fedtask"
+mkdir $FEDTASK_PATH
+cp -r ./fedtask/$TASK ${FEDTASK_PATH}
 
-python main.py --task $TASK --fedtask_folder $FEDTASK_DIR --model resnet18 --algorithm mp_fedavg --num_rounds 200 --num_epochs 5 --learning_rate 0.01 --lr_scheduler 0 --learning_rate_decay 0.998 --proportion 1 --batch_size 20 --eval_interval 1 --gpu 0 --num_threads_per_gpu 1 --log_folder "./chkpts"
+python main.py \
+    --task $TASK \
+    --fedtask_folder $FEDTASK_DIR \
+    --model resnet18 \
+    --algorithm mp_fedavg \
+    --num_rounds 200 \
+    --num_epochs 5 \
+    --learning_rate 0.01 \
+    --lr_scheduler 0 \
+    --learning_rate_decay 0.998 \
+    --proportion 1 \
+    --batch_size 20 \
+    --eval_interval 1 \
+    --gpu 0 \
+    --num_threads_per_gpu 1 \
+    --log_folder "./chkpts"
