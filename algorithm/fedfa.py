@@ -1,32 +1,24 @@
+"""
+This is a non-official implementation of 'Fairness and Accuracy in Federated Learning' (http://arxiv.org/abs/2012.10069)
+"""
 from utils import fmodule
 from .fedbase import BasicServer, BasicClient
 import numpy as np
-import copy
 
 class Server(BasicServer):
     def __init__(self, option, model, clients, test_data = None):
         super(Server, self).__init__(option, model, clients, test_data)
-        # self.m = fmodule._modeldict_zeroslike(self.model.state_dict())
-        self.m = copy.deepcopy(self.model) * 0.0
-        self.beta = option['beta']
+        self.init_algo_para({'beta': 0.5, 'gamma': 0.9})
+        self.m = fmodule._modeldict_zeroslike(self.model.state_dict())
         self.alpha = 1.0 - self.beta
-        self.gamma = option['gamma']
         self.eta = option['learning_rate']
-        self.paras_name=['beta','gamma']
 
-    def unpack(self, pkgs):
-        ws = [p["model"] for p in pkgs]
-        losses = [p["train_loss"] for p in pkgs]
-        ACC = [p["acc"] for p in pkgs]
-        freq = [p["freq"] for p in pkgs]
-        return ws, losses, ACC, freq
-
-    def iterate(self, t):
+    def iterate(self):
         # sample clients
         self.selected_clients = self.sample()
         # training
-        ws, losses, ACC, F = self.communicate(self.selected_clients)
-        if self.selected_clients == []: return
+        res = self.communicate(self.selected_clients)
+        models, losses, ACC, F = res['model'], res['loss'], res['acc'], res['freq']
         # aggregate
         # calculate ACCi_inf, fi_inf
         sum_acc = np.sum(ACC)
@@ -39,12 +31,16 @@ class Server(BasicServer):
         Finf = [f/sum_f for f in Finf]
         # calculate weight = αACCi_inf+βfi_inf
         p = [self.alpha*accinf+self.beta*finf for accinf,finf in zip(ACCinf,Finf)]
-        wnew = self.aggregate(ws, p)
-        dw = wnew - self.model
+        wnew = self.aggregate(models, p)
+        dw = wnew -self.model
         # calculate m = γm+(1-γ)dw
-        self.m = self.gamma * self.m + (1 - self.gamma) * dw
+        self.m = self.gamma*self.m, self.gamma + (1 - self.gamma)*dw
         self.model = wnew - self.m * self.eta
         return
+
+    def aggregate(self, models, p):
+        return fmodule._model_average(models, p)
+
 
 class Client(BasicClient):
     def __init__(self, option, name='', train_data=None, valid_data=None):
@@ -54,18 +50,17 @@ class Client(BasicClient):
 
     def reply(self, svr_pkg):
         model = self.unpack(svr_pkg)
-        acc, loss = self.test(model,'train')
+        metrics = self.test(model,'train')
+        acc, loss = metrics['accuracy'], metrics['loss']
         self.train(model)
         cpkg = self.pack(model, loss, acc)
         return cpkg
 
     def pack(self, model, loss, acc):
         self.frequency += 1
-
         return {
             "model":model,
-            "train_loss":loss,
+            "loss":loss,
             "acc":acc,
             "freq":self.frequency,
         }
-        

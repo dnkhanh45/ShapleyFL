@@ -1,9 +1,13 @@
 import torch
 from torch import nn
 
-device=None
-TaskCalculator=None
+dev_list = []
+dev_manager = None
+TaskCalculator = None
+Optim = None
 Model = None
+SvrModel = None
+CltModel = None
 
 class FModule(nn.Module):
     def __init__(self):
@@ -65,6 +69,10 @@ class FModule(nn.Module):
         for p in self.parameters():
             p.requires_grad = False
 
+    def enable_grad(self):
+        for p in self.parameters():
+            p.requires_grad = True
+
     def zero_dict(self):
         self.op_without_graph()
         for p in self.parameters():
@@ -76,6 +84,26 @@ class FModule(nn.Module):
 
     def get_device(self):
         return next(self.parameters()).device
+
+    def count_parameters(self, output=True):
+        try:
+            import prettytable as pt
+        except:
+            print('Please install prettytable through `pip install prettytable` before calling this func')
+            return
+        table = pt.PrettyTable(["Modules", "Parameters"])
+        total_params = 0
+        for name, parameter in self.named_parameters():
+            if not parameter.requires_grad:
+                table.add_row([name, 0])
+                continue
+            params = parameter.numel()
+            table.add_row([name, params])
+            total_params += params
+        if output:
+            print(table)
+            print(f"TotalTrainableParams: {total_params}")
+        return total_params
 
 def normalize(m):
     return m/(m**2)
@@ -95,8 +123,8 @@ def log(m):
     return element_wise_func(m, torch.log)
 
 def element_wise_func(m, func):
-    if not m: return None
-    res = Model().to(m.get_device())
+    if m is None: return None
+    res = m.__class__().to(m.get_device())
     if m.ingraph:
         res.op_with_graph()
         ml = get_module_from_model(m)
@@ -108,10 +136,26 @@ def element_wise_func(m, func):
         _modeldict_cp(res.state_dict(), _modeldict_element_wise(m.state_dict(), func))
     return res
 
+def _model_to_tensor(m):
+    return torch.cat([mi.data.view(-1) for mi in m.parameters()])
+
+def _model_from_tensor(mt, model_class=None):
+    if model_class is None: model_class = Model
+    res = model_class().to(mt.device)
+    cnt = 0
+    end = 0
+    with torch.no_grad():
+        for i, p in enumerate(res.parameters()):
+            beg = 0 if cnt == 0 else end
+            end = end + p.view(-1).size()[0]
+            p.data = mt[beg:end].contiguous().view(p.data.size())
+            cnt += 1
+    return res
+
 def _model_sum(ms):
-    if not ms: return None
+    if len(ms)==0: return None
     op_with_graph = sum([mi.ingraph for mi in ms]) > 0
-    res = Model().to(ms[0].get_device())
+    res = ms[0].__class__().to(ms[0].get_device())
     if op_with_graph:
         mlks = [get_module_from_model(mi) for mi in ms]
         mlr = get_module_from_model(res)
@@ -127,10 +171,10 @@ def _model_sum(ms):
     return res
 
 def _model_average(ms = [], p = []):
-    if not ms: return None
-    if not p: p = [1.0 / len(ms) for _ in range(len(ms))]
+    if len(ms)==0: return None
+    if len(p)==0: p = [1.0 / len(ms) for _ in range(len(ms))]
     op_with_graph = sum([w.ingraph for w in ms]) > 0
-    res = Model().to(ms[0].get_device())
+    res = ms[0].__class__().to(ms[0].get_device())
     if op_with_graph:
         mlks = [get_module_from_model(mi) for mi in ms]
         mlr = get_module_from_model(res)
@@ -147,7 +191,7 @@ def _model_average(ms = [], p = []):
 
 def _model_add(m1, m2):
     op_with_graph = m1.ingraph or m2.ingraph
-    res = Model().to(m1.get_device())
+    res = m1.__class__().to(m1.get_device())
     if op_with_graph:
         res.op_with_graph()
         ml1 = get_module_from_model(m1)
@@ -164,7 +208,7 @@ def _model_add(m1, m2):
 
 def _model_sub(m1, m2):
     op_with_graph = m1.ingraph or m2.ingraph
-    res = Model().to(m1.get_device())
+    res = m1.__class__().to(m1.get_device())
     if op_with_graph:
         res.op_with_graph()
         ml1 = get_module_from_model(m1)
@@ -181,7 +225,7 @@ def _model_sub(m1, m2):
 
 def _model_scale(m, s):
     op_with_graph = m.ingraph
-    res = Model().to(m.get_device())
+    res = m.__class__().to(m.get_device())
     if op_with_graph:
         ml = get_module_from_model(m)
         mlr = get_module_from_model(res)
@@ -249,14 +293,13 @@ def get_module_from_model(model, res = None):
             get_module_from_model(model.__getattr__(name), res)
     return res
 
-
 def _modeldict_cp(md1, md2):
     for layer in md1.keys():
         md1[layer].data.copy_(md2[layer])
     return
 
 def _modeldict_sum(mds):
-    if not mds: return None
+    if len(mds)==0: return None
     md_sum = {}
     for layer in mds[0].keys():
         md_sum[layer] = torch.zeros_like(mds[0][layer])
@@ -269,7 +312,7 @@ def _modeldict_sum(mds):
     return md_sum
 
 def _modeldict_weighted_average(mds, weights=[]):
-    if not mds:
+    if len(mds)==0:
         return None
     md_avg = {}
     for layer in mds[0].keys(): md_avg[layer] = torch.zeros_like(mds[0][layer])
@@ -283,7 +326,8 @@ def _modeldict_weighted_average(mds, weights=[]):
             md_avg[layer] = md_avg[layer] + mds[wid][layer] * weight
     return md_avg
 
-def _modeldict_to_device(md, device = device):
+def _modeldict_to_device(md):
+    device = md[list(md)[0]].device
     res = {}
     for layer in md.keys():
         if md[layer] is None:
@@ -356,7 +400,7 @@ def _modeldict_to_tensor1D(md):
 def _modeldict_dot(md1, md2):
     res = torch.tensor(0.).to(md1[list(md1)[0]].device)
     for layer in md1.keys():
-        if md1[layer] is None or md1[layer].requires_grad==False:
+        if md1[layer] is None:
             continue
         res += (md1[layer].view(-1).dot(md2[layer].view(-1)))
     return res
@@ -385,16 +429,56 @@ def _modeldict_element_wise(md, func):
 def _modeldict_num_parameters(md):
     res = 0
     for layer in md.keys():
-        if md[layer] is None or md[layer].requires_grad==False: continue
+        if md[layer] is None: continue
         s = 1
         for l in md[layer].shape:
             s *= l
         res += s
     return res
 
-def _modeldict_print(md, only_requires_grad = False):
+def _modeldict_print(md):
     for layer in md.keys():
-        if md[layer] is None or (only_requires_grad == False and md[layer].requires_grad==False):
+        if md[layer] is None:
             continue
         print("{}:{}".format(layer, md[layer]))
 
+def with_multi_gpus(func):
+    def cal_on_personal_gpu(self, model, *args, **kargs):
+        origin_device = model.get_device()
+        # transfer to new device
+        new_args = []
+        new_kargs = {}
+        for arg in args:
+            narg = arg.to(self.device) if hasattr(arg, 'get_device') or hasattr(arg, 'device') else arg
+            new_args.append(narg)
+        for k,v in kargs.items():
+            nv = v.to(self.device) if hasattr(v, 'get_device') or hasattr(v, 'device') else v
+            new_kargs[k] = nv
+        model.to(self.device)
+        # calculating
+        res = func(self, model, *tuple(new_args), **new_kargs)
+        # transter to original device
+        model.to(origin_device)
+        if res is not None:
+            if type(res)==dict:
+                for k,v in res.items():
+                    nv = v.to(origin_device) if hasattr(v, 'get_device') or hasattr(v, 'device') else v
+                    res[k] = nv
+            elif type(res)==tuple or type(res)==list:
+                new_res = []
+                for v in res:
+                    nv = v.to(origin_device) if hasattr(v, 'get_device') or hasattr(v, 'device') else v
+                    new_res.append(nv)
+                if type(res)==tuple:
+                    res = tuple(new_res)
+            else:
+                res = res.to(origin_device) if hasattr(res, 'get_device') or hasattr(res, 'device') else res
+        return res
+    return cal_on_personal_gpu
+
+def get_device():
+    if len(dev_list)==0: return torch.device('cpu')
+    crt_dev = 0
+    while True:
+        yield dev_list[crt_dev]
+        crt_dev = (crt_dev+1)%len(dev_list)

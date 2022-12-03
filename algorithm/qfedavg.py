@@ -1,3 +1,7 @@
+"""This is a non-official implementation of 'Fair Resource Allocation in
+Federated Learning' (http://arxiv.org/abs/1905.10497).  And this implementation
+refers to the official github repository https://github.com/litian96/fair_flearn """
+
 from .fedbase import BasicServer, BasicClient
 import numpy as np
 from utils import fmodule
@@ -5,15 +9,14 @@ from utils import fmodule
 class Server(BasicServer):
     def __init__(self, option, model, clients, test_data = None):
         super(Server, self).__init__(option, model, clients, test_data)
-        self.q = option['q']
-        self.paras_name = ['q']
+        self.init_algo_para({'q':0.1})
 
-    def iterate(self, t):
+    def iterate(self):
         # sample clients
         self.selected_clients = self.sample()
         # training
-        models, train_losses = self.communicate(self.selected_clients)
-        if self.selected_clients == []: return
+        res = self.communicate(self.selected_clients)
+        models, train_losses = res['model'], res['loss']
         # plug in the weight updates into the gradient
         grads = [(self.model- model) / self.lr for model in models]
         Deltas = [gi*np.float_power(li + 1e-10, self.q) for gi,li in zip(grads,train_losses)]
@@ -31,5 +34,15 @@ class Server(BasicServer):
         return new_model
 
 class Client(BasicClient):
-    def __init__(self, option, name='', train_data=None, valid_data=None):
-        super(Client, self).__init__(option, name, train_data, valid_data)
+    def reply(self, svr_pkg):
+        model = self.unpack(svr_pkg)
+        train_loss = self.test(model, 'train')['loss']
+        self.train(model)
+        cpkg = self.pack(model, train_loss)
+        return cpkg
+
+    def pack(self, model, loss):
+        return {
+            "model" : model,
+            "loss": loss,
+        }

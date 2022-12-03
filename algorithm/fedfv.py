@@ -1,3 +1,6 @@
+"""
+This is the official implementation of 'Federated Learning with Fair Averaging' (http://arxiv.org/abs/2104.14937)
+"""
 from utils import fmodule
 from .fedbase import BasicServer, BasicClient
 import copy
@@ -6,25 +9,23 @@ import math
 class Server(BasicServer):
     def __init__(self, option, model, clients, test_data = None):
         super(Server, self).__init__(option, model, clients, test_data)
-        # algorithm hyper-parameters
+        # algorithm-dependent hyper-parameters
+        self.init_algo_para({'alpha':0.1, 'tau':1})
         self.learning_rate = option['learning_rate']
-        self.alpha = option['alpha']
-        self.tau = option['tau']
         self.client_last_sample_round = [-1 for i in range(self.num_clients)]
         self.client_grads_history = [0 for i in range(self.num_clients)]
-        self.paras_name=['alpha','tau']
 
-    def iterate(self, t):
+    def iterate(self):
         # sampling
         self.selected_clients = self.sample()
         # training locally
-        ws, losses = self.communicate(self.selected_clients)
-        if self.selected_clients == []: return
+        res = self.communicate(self.selected_clients)
+        ws, losses = res['model'], res['loss']
         grads = [self.model - w for w in ws]
         # update GH
-        for cid, gi in zip(self.selected_clients, grads):
+        for cid, gi in zip(self.received_clients, grads):
             self.client_grads_history[cid] = gi
-            self.client_last_sample_round[cid] = t
+            self.client_last_sample_round[cid] = self.current_round
 
         # project grads
         order_grads = copy.deepcopy(grads)
@@ -54,10 +55,10 @@ class Server(BasicServer):
         # aggregate projected grads
         gt = fmodule._model_average(order_grads)
         # mitigate external conflicts
-        if t >= self.tau:
+        if self.current_round >= self.tau:
             for k in range(self.tau-1, -1, -1):
                 # calculate outside conflicts
-                gcs = [self.client_grads_history[cid] for cid in range(self.num_clients) if self.client_last_sample_round[cid] == t - k and gt.dot(self.client_grads_history[cid]) < 0]
+                gcs = [self.client_grads_history[cid] for cid in range(self.num_clients) if self.client_last_sample_round[cid] == self.current_round - k and gt.dot(self.client_grads_history[cid]) < 0]
                 if gcs:
                     g_con = fmodule._model_sum(gcs)
                     dot = gt.dot(g_con)
@@ -74,3 +75,16 @@ class Server(BasicServer):
 class Client(BasicClient):
     def __init__(self, option, name='', train_data=None, valid_data=None):
         super(Client, self).__init__(option, name, train_data, valid_data)
+
+    def reply(self, svr_pkg):
+        model = self.unpack(svr_pkg)
+        train_loss = self.test(model, 'train')['loss']
+        self.train(model)
+        cpkg = self.pack(model, train_loss)
+        return cpkg
+
+    def pack(self, model, loss):
+        return {
+            "model" : model,
+            "loss": loss,
+        }

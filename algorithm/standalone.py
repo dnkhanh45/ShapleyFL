@@ -1,63 +1,28 @@
-from .fedbase import BasicServer, BasicClient
-from utils.fflow import Logger
+from .fedbase import BasicServer
+from .fedavg import Client
 import utils.fflow as flw
+import utils.logger.basic_logger as bl
 import os
-
-class MyLogger(Logger):
-    def log(self, server=None, models=[]):
-        if server == None or models == []: return
-        if self.output == {}:
-            self.output = {
-                "meta": server.option,
-                'test_metrics': [],
-                'test_losses': [],
-                'train_metrics': [],
-                'train_losses': [],
-                'valid_metrics': [],
-                'valid_losses': [],
-            }
-
-        for cid in range(server.num_clients):
-            server.model = models[cid]
-            test_metric, test_loss = server.test()
-            train_metric, train_loss = server.clients[cid].test(server.model, 'train')
-            valid_metric, valid_loss = server.clients[cid].test(server.model, 'valid')
-            self.output['test_metrics'].append(test_metric)
-            self.output['test_losses'].append(test_loss)
-            self.output['train_metrics'].append(train_metric)
-            self.output['train_losses'].append(train_loss)
-            self.output['valid_metrics'].append(valid_metric)
-            self.output['valid_losses'].append(valid_loss)
-
-logger = MyLogger()
+import numpy as np
 
 class Server(BasicServer):
     def __init__(self, option, model, clients, test_data = None):
         super(Server, self).__init__(option, model, clients, test_data)
 
     def run(self):
-        logger.time_start('Total Time Cost')
-        selected_clients = [_ for _ in range(self.num_clients)]
-        models = self.communicate(selected_clients)
-        logger.time_end('Total Time Cost')
-        logger.log(self, models)
-        logger.save(os.path.join('fedtask', self.option['task'], 'record', flw.output_filename(self.option, self)))
+        flw.logger.time_start('Total Time Cost')
+        self.selected_clients = self.sample()
+        models = self.communicate(self.selected_clients)['model']
+        flw.logger.time_end('Total Time Cost')
+        flw.logger.log_once(models)
+        flw.logger.save_output_as_json()
         return
 
-    def unpack(self, packages_received_from_clients):
-        return [packages_received_from_clients[cid]['model'] for cid in range(self.num_clients)]
-
-class Client(BasicClient):
-    def __init__(self, option, name='', train_data=None, valid_data=None):
-        super(Client, self).__init__(option, name, train_data, valid_data)
-
-    def reply(self, svr_pkg):
-        model = self.unpack(svr_pkg)
-        self.train(model)
-        cpkg = self.pack(model)
-        return cpkg
-
-    def pack(self, model):
-        return {
-            "model": model,
-        }
+class Logger(bl.Logger):
+    def log_once(self, models=[]):
+        if models == []: return
+        for id, cid in enumerate(self.server.selected_clients):
+            test_metric = self.server.test(models[id])
+            cname = self.clients[cid].name
+            for met_name, met_val in test_metric.items():
+                self.output['test_' + met_name + '_' + cname].append(met_val)

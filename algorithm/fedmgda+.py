@@ -1,5 +1,9 @@
+"""
+This is a non-official implementation of 'FedMGDA+: Federated Learning meets Multi-objective Optimization' (http://arxiv.org/abs/2006.11489)
+"""
 from utils import fmodule
-from .fedbase import BasicServer, BasicClient
+from .fedbase import BasicServer
+from .fedavg import Client
 import numpy as np
 import copy
 import cvxopt
@@ -7,22 +11,19 @@ import cvxopt
 class Server(BasicServer):
     def __init__(self, option, model, clients, test_data = None):
         super(Server, self).__init__(option, model, clients, test_data)
-        # algorithm hyper-parameters
+        # algorithm-dependenet hyper-parameters
+        self.init_algo_para({'eta':1, 'epsilon':0.1})
         self.dynamic_lambdas = np.ones(self.num_clients) * 1.0 / self.num_clients
-        self.learning_rate = option['eta']
-        self.epsilon = option['epsilon']
-        self.paras_name = ['epsilon','eta']
 
-    def iterate(self, t):
+    def iterate(self):
         self.selected_clients = self.sample()
         # training
-        models, losses = self.communicate(self.selected_clients)
-        if self.selected_clients == []: return
+        models = self.communicate(self.selected_clients)['model']
         grads = [self.model-w for w in models]
         # clip grads
         for gi in grads: gi.normalize()
         # calculate λ0
-        nks = [self.client_vols[cid] for cid in self.selected_clients]
+        nks = [self.local_data_vols[cid] for cid in self.received_clients]
         nt = sum(nks)
         lambda0 = [1.0*nk/nt for nk in nks]
         # optimize lambdas to minimize ||λ'g||² s.t. λ∈Δ, ||λ - λ0||∞ <= ε
@@ -31,7 +32,7 @@ class Server(BasicServer):
         # aggregate grads
         dt = fmodule._model_average(grads, self.dynamic_lambdas)
         # update model
-        self.model = self.model - dt * self.learning_rate
+        self.model = self.model - dt * self.eta
         return
 
     def optim_lambda(self, grads, lambda0):
@@ -75,8 +76,3 @@ class Server(BasicServer):
         b = cvxopt.matrix(b.tolist(), tc='d')
         sol = cvxopt.solvers.qp(P, q.T, G.T, h.T, A.T, b)
         return np.array(sol['x'])
-
-
-class Client(BasicClient):
-    def __init__(self, option, name='', train_data=None, valid_data=None):
-        super(Client, self).__init__(option, name, train_data, valid_data)
