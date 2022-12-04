@@ -57,6 +57,14 @@ pip install bitsets
 ```
 
 # Run experiments:
+Run independently
 ```
-bash ./script/run_remote/cifar10_classification_cnum6_dist2_skew0.6_seed0.sh
+bash ./script/run_remote/cifar10_classification_cnum16_dist2_skew0.6_seed0.sh
+bash ./script/run_remote/cifar10_classification_cnum16_dist6_skew0.6_seed0.sh
+bash ./script/run_remote/cifar10_classification_cnum50_dist0_skew0_seed0.sh
+bash ./script/run_remote/cifar10_classification_cnum50_dist2_skew0.6_seed0.sh
+bash ./script/run_remote/mnist_classification_cnum16_dist2_skew0.6_seed0.sh
+bash ./script/run_remote/mnist_classification_cnum16_dist6_skew0.6_seed0.sh
+bash ./script/run_remote/mnist_classification_cnum50_dist0_skew0_seed0.sh
+bash ./script/run_remote/mnist_classification_cnum50_dist2_skew0.6_seed0.sh
 ```

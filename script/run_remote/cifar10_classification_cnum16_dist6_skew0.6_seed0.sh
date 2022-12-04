@@ -66,5 +66,6 @@ python main.py \
     --const_lambda \
     --optimal_lambda \
     --optimal_lambda_samples 300 \
+    --exact \
     --fedtask_path $FEDTASK_PATH \
     --data_path $DATA_PATH \
