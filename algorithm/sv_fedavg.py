@@ -259,15 +259,21 @@ class Server(BasicServer):
         flw.logger.time_end('Eval Time Cost')
         flw.logger.info("=================End==================")
         flw.logger.time_end('Total Time Cost')
+        
         #log wandb
-
-        exact_table = wandb.Table(data=self.sv_exact_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
-        const_table = wandb.Table(data=self.sv_const_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
-        opt_table = wandb.Table(data=self.sv_opt_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
+        if self.exact:
+            exact_table = wandb.Table(data=self.sv_exact_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
+        if self.const_lambda:
+            const_table = wandb.Table(data=self.sv_const_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
+        if self.optimal_lambda:
+            opt_table = wandb.Table(data=self.sv_opt_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
         for i in range(self.num_clients):
-            wandb.log({f'BarChart-Exact{i}': wandb.plot.bar(exact_table, str(self.num_clients + 1), str(i + 1), title='Exact SV')})
-            wandb.log({f'BarChart-Const{i}': wandb.plot.bar(const_table, str(self.num_clients + 1), str(i + 1), title='Const SV')})
-            wandb.log({f'BarChart-Optimal{i}': wandb.plot.bar(opt_table, str(self.num_clients + 1), str(i + 1), title='Optimal SV')})
+            if self.exact:
+                wandb.log({f'BarChart-Exact{i}': wandb.plot.bar(exact_table, str(self.num_clients + 1), str(i + 1), title='Exact SV')})
+            if self.const_lambda:
+                wandb.log({f'BarChart-Const{i}': wandb.plot.bar(const_table, str(self.num_clients + 1), str(i + 1), title='Const SV')})
+            if self.optimal_lambda:
+                wandb.log({f'BarChart-Optimal{i}': wandb.plot.bar(opt_table, str(self.num_clients + 1), str(i + 1), title='Optimal SV')})
             
         # save results as .json file
         flw.logger.save_output_as_json()
