@@ -19,7 +19,7 @@ rm -r ${LOG_DIR}
 mkdir ${LOG_DIR}
 
 # GPU variables
-GPU_IDS=( 0 1 )
+GPU_IDS=( 0 )
 NUM_THREADS=1
 BATCH_SIZE=20
 
