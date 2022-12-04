@@ -433,6 +433,7 @@ class DefaultTaskGen(BasicTaskGen):
                 minv = np.min(proportions * len(self.train_data))
             proportions = (np.cumsum(proportions) * len(d_idxs)).astype(int)[:-1]
             local_datas  = np.split(d_idxs, proportions)
+            local_datas = [local_data.tolist() for local_data in local_datas]
         return local_datas
 
     def local_holdout(self, local_datas, shuffle=False):

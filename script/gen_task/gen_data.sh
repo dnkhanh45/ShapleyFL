@@ -11,6 +11,8 @@ source ~/venv/pytorch1.11+horovod/bin/activate
 python generate_fedtask.py --benchmark cifar10_classification --dist 2 --skew 0.6 --num_clients 16 --seed 0
 python generate_fedtask.py --benchmark cifar10_classification --dist 6 --skew 0.6 --num_clients 16 --seed 0
 python generate_fedtask.py --benchmark cifar10_classification --dist 0 --skew 0 --num_clients 50 --seed 0
-python generate_fedtask.py --benchmark mnist --dist 2 --skew 0.6 --num_clients 16 --seed 0
-python generate_fedtask.py --benchmark mnist --dist 6 --skew 0.6 --num_clients 16 --seed 0
-python generate_fedtask.py --benchmark mnist --dist 0 --skew 0 --num_clients 50 --seed 0
+python generate_fedtask.py --benchmark cifar10_classification --dist 2 --skew 0.6 --num_clients 50 --seed 0
+python generate_fedtask.py --benchmark mnist_classification --dist 2 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --benchmark mnist_classification --dist 6 --skew 0.6 --num_clients 16 --seed 0
+python generate_fedtask.py --benchmark mnist_classification --dist 0 --skew 0 --num_clients 50 --seed 0
+python generate_fedtask.py --benchmark mnist_classification --dist 2 --skew 0.6 --num_clients 50 --seed 0

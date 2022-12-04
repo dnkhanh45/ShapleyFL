@@ -12,7 +12,8 @@ import random
 import pickle
 import itertools
 import utils.system_simulator as ss
-
+import wandb
+import utils.fflow as flw
 
 class Server(BasicServer):
     def __init__(
@@ -30,6 +31,9 @@ class Server(BasicServer):
         self.optimal_lambda = option['optimal_lambda']
         self.optimal_lambda_samples = option['optimal_lambda_samples']
         self.calculate_fl_SV = self.exact or self.const_lambda or self.optimal_lambda
+        self.sv_const_logs = []
+        self.sv_exact_logs = []
+        self.sv_opt_logs = []
         
         if self.exact:
             self.exact_dir = os.path.join('./SV_result', self.option['task'], 'exact')
@@ -228,8 +232,49 @@ class Server(BasicServer):
             p = [pk/sump for pk in p]
             return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
 
+    def run(self):
+        """
+        Start the federated learning symtem where the global model is trained iteratively.
+        """
+        flw.logger.time_start('Total Time Cost')
+        for round in range(1, self.num_rounds+1):
+            self.current_round = round
+            # using logger to evaluate the model
+            flw.logger.info("--------------Round {}--------------".format(round))
+            flw.logger.time_start('Time Cost')
+            if flw.logger.check_if_log(round, self.eval_interval):
+                flw.logger.time_start('Eval Time Cost')
+                flw.logger.log_once()
+                flw.logger.time_end('Eval Time Cost')
+            # check if early stopping
+            if flw.logger.early_stop(): break
+            # federated train
+            self.iterate(round)
+            # decay learning rate
+            self.global_lr_scheduler(round)
+            flw.logger.time_end('Time Cost')
+        flw.logger.info("--------------Final Evaluation--------------")
+        flw.logger.time_start('Eval Time Cost')
+        flw.logger.log_once()
+        flw.logger.time_end('Eval Time Cost')
+        flw.logger.info("=================End==================")
+        flw.logger.time_end('Total Time Cost')
+        #log wandb
+
+        exact_table = wandb.Table(data=self.sv_exact_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
+        const_table = wandb.Table(data=self.sv_const_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
+        opt_table = wandb.Table(data=self.sv_opt_logs, columns=[str(i + 1) for i in range(self.num_clients + 1)])
+        for i in range(self.num_clients):
+            wandb.log({f'BarChart-Exact{i}': wandb.plot.bar(exact_table, str(self.num_clients + 1), str(i + 1), title='Exact SV')})
+            wandb.log({f'BarChart-Const{i}': wandb.plot.bar(const_table, str(self.num_clients + 1), str(i + 1), title='Const SV')})
+            wandb.log({f'BarChart-Optimal{i}': wandb.plot.bar(opt_table, str(self.num_clients + 1), str(i + 1), title='Optimal SV')})
+            
+        # save results as .json file
+        flw.logger.save_output_as_json()
+        return
+    
     @ss.time_step
-    def iterate(self):
+    def iterate(self, round):
         """
         The standard iteration of each federated round that contains three
         necessary procedure in FL: client selection, communication and model aggregation.
@@ -246,7 +291,10 @@ class Server(BasicServer):
         print("Round clients:", self.received_clients)
         # aggregate
         self.model = self.aggregate(models)
-        
+        #testing phase
+        valid_accs = np.array(self.test_on_clients('valid')['accuracy'])
+        test_acc = self.test()
+        wandb.log({'Train accuracy': valid_accs.sum() / len(valid_accs), 'Test accuracy': test_acc['accuracy']})
         # calculate Shapley values
         if self.calculate_fl_SV:
             print('Finish training!')
@@ -262,18 +310,27 @@ class Server(BasicServer):
             print('Exact FL SV', end=': ')
             round_SV = self.calculate_round_exact_SV()
             print(round_SV)
+            round_SV = round_SV.tolist()
+            round_SV.append(round)
+            self.sv_exact_logs.append(round_SV)
             with open(os.path.join(self.exact_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
                 pickle.dump(round_SV, f)
         if self.const_lambda:
             print('Const lambda FL SV', end=': ')
             round_SV = self.calculate_round_const_lambda_SV()
             print(round_SV)
+            round_SV = round_SV.tolist()
+            round_SV.append(round)
+            self.sv_const_logs.append(round_SV)
             with open(os.path.join(self.const_lambda_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
                 pickle.dump(round_SV, f)
         if self.optimal_lambda:
             print('Optimal lambda FL SV', end=': ')
             round_SV = self.calculate_round_optimal_lambda_SV()
             print(round_SV)
+            round_SV = round_SV.tolist()
+            round_SV.append(round)
+            self.sv_opt_logs.append(round_SV)
             with open(os.path.join(self.optimal_lambda_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
                 pickle.dump(round_SV, f)
         return
