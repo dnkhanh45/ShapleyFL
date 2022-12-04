@@ -14,7 +14,7 @@ module load nccl/2.11/2.11.4-1
 module load python/3.10/3.10.4
 source ~/venv/pytorch1.11+horovod/bin/activate
 
-LOG_DIR="/home/aaa10078nj/Federated_Learning/Shapley_value/logs/cifar10/$JOB_NAME_$JOB_ID"
+LOG_DIR="/home/aaa10078nj/Federated_Learning/Shapley_value/logs/mnist/$JOB_NAME_$JOB_ID"
 rm -r ${LOG_DIR}
 mkdir ${LOG_DIR}
 
