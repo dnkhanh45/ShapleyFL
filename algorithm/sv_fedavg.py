@@ -14,6 +14,9 @@ import itertools
 import utils.system_simulator as ss
 import wandb
 import utils.fflow as flw
+import torch.multiprocessing as mp
+import utils.fmodule
+from utils import fmodule
 
 class Server(BasicServer):
     def __init__(
@@ -236,8 +239,29 @@ class Server(BasicServer):
         """
         Start the federated learning symtem where the global model is trained iteratively.
         """
+        store_path = 'checkpoint'
+        if not os.path.exists(store_path):
+            os.mkdir(store_path)
+        if not os.path.exists(os.path.join(store_path, self.option['task'])):
+            os.mkdir(os.path.join(store_path, self.option['task']))
+        store_path = f"checkpoint/{self.option['task']}"
+        
+        if not os.path.exists(os.path.join(store_path, 'local')):
+            os.mkdir(os.path.join(store_path, 'local'))
+        if not os.path.exists(os.path.join(store_path, 'global')):
+            os.mkdir(os.path.join(store_path, 'global'))
+        
+        if not os.path.exists(os.path.join(store_path, 'global','round0')):
+            os.mkdir(os.path.join(store_path, 'global','round0'))
+        torch.save(self.model.state_dict(), os.path.join(store_path, 'global', 'round0/global_model.pt'))
+
         flw.logger.time_start('Total Time Cost')
         for round in range(1, self.num_rounds+1):
+            global_store_path = os.path.join(store_path, 'global', f'round{round}')
+            local_store_path = os.path.join(store_path, 'local', f'round{round}')
+            os.makedirs(global_store_path, exist_ok=True)
+            os.makedirs(local_store_path, exist_ok=True)
+            
             self.current_round = round
             # using logger to evaluate the model
             flw.logger.info("--------------Round {}--------------".format(round))
@@ -249,7 +273,7 @@ class Server(BasicServer):
             # check if early stopping
             if flw.logger.early_stop(): break
             # federated train
-            self.iterate(round)
+            self.iterate(round, global_store_path, local_store_path)
             # decay learning rate
             self.global_lr_scheduler(round)
             flw.logger.time_end('Time Cost')
@@ -279,24 +303,74 @@ class Server(BasicServer):
         flw.logger.save_output_as_json()
         return
     
+    @ss.with_dropout
+    @ss.with_clock
+    def communicate(self, selected_clients, local_store_path, asynchronous=False):
+        """
+        The whole simulating communication procedure with the selected clients.
+        This part supports for simulating the client dropping out.
+        :param
+            selected_clients: the clients to communicate with
+        :return
+            :the unpacked response from clients that is created ny self.unpack()
+        """
+        packages_received_from_clients = []
+        client_package_buffer = {}
+        communicate_clients = list(set(selected_clients))
+        for cid in communicate_clients:client_package_buffer[cid] = None
+        if self.num_threads <= 1:
+            # computing iteratively
+            for client_id in communicate_clients:
+                response_from_client_id = self.communicate_with(client_id)
+                torch.save(response_from_client_id['model'].state_dict(), os.path.join(local_store_path, f'client{client_id}_model.pt'))
+                packages_received_from_clients.append(response_from_client_id)
+        else:
+            # computing in parallel with torch.multiprocessing
+            pool = mp.Pool(self.num_threads)
+            for client_id in communicate_clients:
+                self.clients[client_id].update_device(next(utils.fmodule.dev_manager))
+                packages_received_from_clients.append(pool.apply_async(self.communicate_with, args=(int(client_id),)))
+            pool.close()
+            pool.join()
+            packages_received_from_clients = list(map(lambda x: x.get(), packages_received_from_clients))
+        for i,cid in enumerate(communicate_clients): client_package_buffer[cid] = packages_received_from_clients[i]
+        packages_received_from_clients = [client_package_buffer[cid] for cid in selected_clients if client_package_buffer[cid]]
+        self.received_clients = selected_clients
+        return self.unpack(packages_received_from_clients)
+
+    @ss.with_latency
+    def communicate_with(self, client_id):
+        """
+        Pack the information that is needed for client_id to improve the global model
+        :param
+            client_id: the id of the client to communicate with
+        :return
+            client_package: the reply from the client and will be 'None' if losing connection
+        """
+        # package the necessary information
+        svr_pkg = self.pack(client_id)
+        # listen for the client's response
+        return self.clients[client_id].reply(svr_pkg)
+    
     @ss.time_step
-    def iterate(self, round):
+    def iterate(self, round, global_store_path, local_store_path):
         """
         The standard iteration of each federated round that contains three
         necessary procedure in FL: client selection, communication and model aggregation.
         :param
             t: the number of current round
         """
-
+        
         # sample clients: MD sampling as default but with replacement=False
         self.selected_clients = self.sample()
         # training
-        clients_reply = self.communicate(self.selected_clients)
+        clients_reply = self.communicate(self.selected_clients, local_store_path)
         models = clients_reply['model']
         names = clients_reply['name']
         print("Round clients:", self.received_clients)
         # aggregate
         self.model = self.aggregate(models)
+        torch.save(self.model.state_dict(), os.path.join(global_store_path, 'global_model.pt'))
         #testing phase
         valid_accs = np.array(self.test_on_clients('valid')['accuracy'])
         test_acc = self.test()
