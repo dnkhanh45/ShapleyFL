@@ -70,6 +70,7 @@ def read_option():
     parser.add_argument('--const_lambda', help="Calculate FL const_lambda SV", action='store_true')
     parser.add_argument('--optimal_lambda', help="Calculate FL optimal_lambda SV", action='store_true')
     parser.add_argument('--optimal_lambda_samples', help="FL optimal_lambda SV number of samples", type=int, default=300)
+    parser.add_argument('--previous_rnd_acc_for_empty_subset', help="Use previous round accuracy as utility function result for empty subset", action='store_true')
     # central SV
     parser.add_argument('--log_folder', help='Store experiment files', type=str, default=None)
     parser.add_argument('--start', help='Id of start subset', type=int, default=0)

@@ -55,6 +55,8 @@ class BasicTaskGen:
         8: 'concept skew',
         9: 'concept and feature skew and balance',
         10: 'concept and feature skew and imbalance',
+        11: 'iid_volumn_skew by Zipf distribution',
+        12: 'custom'
     }
     _TYPE_DATASET = ['2DImage', '3DImage', 'Text', 'Sequential', 'Graph', 'Tabular']
 

@@ -8,6 +8,7 @@ def read_option():
     parser.add_argument('--skew', help='the degree of niid;', type=float, default=0)
     parser.add_argument('--num_clients', help='the number of clients;', type=int, default=5)
     parser.add_argument('--seed', help='random seed;', type=int, default=0)
+    parser.add_argument('--min_vol', help='min size of local datasets;', type=int, default=50)
     try: option = vars(parser.parse_args())
     except IOError as msg: parser.error(str(msg))
     return option

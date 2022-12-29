@@ -228,10 +228,19 @@ class BasicServer:
         """
         if len(models) == 0: return self.model
         if self.aggregation_option == 'weighted_scale':
-            p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
-            K = len(models)
-            N = self.num_clients
-            return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)]) * N / K
+            # Old version:
+            # p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
+            # K = len(models)
+            # N = self.num_clients
+            # print(np.array(p))
+            # print(np.array(p) * N / K)
+            # return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)]) * N / K
+            
+            # New version:
+            p = np.array([self.local_data_vols[cid] for cid in self.received_clients])
+            p = p / p.sum()
+            return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
+        
         elif self.aggregation_option == 'uniform':
             return fmodule._model_average(models)
         elif self.aggregation_option == 'weighted_com':
@@ -382,7 +391,7 @@ class BasicClient():
             optimizer.step()
         return
 
-    @ fmodule.with_multi_gpus
+    @fmodule.with_multi_gpus
     def test(self, model, dataflag='valid'):
         """
         Evaluate the model with local data (e.g. training data or validating data).

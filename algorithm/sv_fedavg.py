@@ -2,12 +2,9 @@ from .fedbase import BasicServer, BasicClient
 import torch
 import os
 import numpy as np
-from tqdm.auto import tqdm
 import networkx as nx
 import metis
 from bitsets import bitset
-from utils import fmodule
-from tqdm.auto import tqdm
 import random
 import pickle
 import itertools
@@ -15,9 +12,6 @@ import utils.system_simulator as ss
 import wandb
 import utils.fflow as flw
 import torch.multiprocessing as mp
-import utils.fmodule
-from utils import fmodule
-
 class Server(BasicServer):
     def __init__(
         self,
@@ -192,49 +186,7 @@ class Server(BasicServer):
             nodes_indexes = np.where(partitions == partition_index)[0]
             self.rnd_partitions.append(rnd_all_nodes[nodes_indexes])
         return
-
-    def aggregate(self, models: list, client_indices=None, *args, **kwargs):
-        """
-        Aggregate the locally improved models.
-        :param
-            models: a list of local models
-        :return
-            the averaged result
-        pk = nk/n where n=self.data_vol
-        K = |S_t|
-        N = |S|
-        -------------------------------------------------------------------------------------------------------------------------
-         weighted_scale                 |uniform (default)          |weighted_com (original fedavg)   |other
-        ==========================================================================================================================
-        N/K * Σpk * model_k             |1/K * Σmodel_k             |(1-Σpk) * w_old + Σpk * model_k  |Σ(pk/Σpk) * model_k
-        """
-        if len(models) == 0: return self.model
-        if self.aggregation_option == 'weighted_scale':
-            if client_indices:
-                p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in client_indices]
-            else:
-                p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
-            K = len(models)
-            N = self.num_clients
-            return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)]) * N / K
-        elif self.aggregation_option == 'uniform':
-            return fmodule._model_average(models)
-        elif self.aggregation_option == 'weighted_com':
-            if client_indices:
-                p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in client_indices]
-            else:
-                p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
-            w = fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
-            return (1.0-sum(p))*self.model + w
-        else:
-            if client_indices:
-                p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in client_indices]
-            else:
-                p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
-            sump = sum(p)
-            p = [pk/sump for pk in p]
-            return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
-
+    
     def run(self):
         """
         Start the federated learning symtem where the global model is trained iteratively.
@@ -256,6 +208,7 @@ class Server(BasicServer):
         torch.save(self.model.state_dict(), os.path.join(store_path, 'global', 'round0/global_model.pt'))
 
         flw.logger.time_start('Total Time Cost')
+        
         for round in range(1, self.num_rounds+1):
             global_store_path = os.path.join(store_path, 'global', f'round{round}')
             local_store_path = os.path.join(store_path, 'local', f'round{round}')
@@ -303,54 +256,124 @@ class Server(BasicServer):
         flw.logger.save_output_as_json()
         return
     
-    @ss.with_dropout
-    @ss.with_clock
-    def communicate(self, selected_clients, local_store_path, asynchronous=False):
-        """
-        The whole simulating communication procedure with the selected clients.
-        This part supports for simulating the client dropping out.
-        :param
-            selected_clients: the clients to communicate with
-        :return
-            :the unpacked response from clients that is created ny self.unpack()
-        """
-        packages_received_from_clients = []
-        client_package_buffer = {}
-        communicate_clients = list(set(selected_clients))
-        for cid in communicate_clients:client_package_buffer[cid] = None
-        if self.num_threads <= 1:
-            # computing iteratively
-            for client_id in communicate_clients:
-                response_from_client_id = self.communicate_with(client_id)
-                torch.save(response_from_client_id['model'].state_dict(), os.path.join(local_store_path, f'client{client_id}_model.pt'))
-                packages_received_from_clients.append(response_from_client_id)
-        else:
-            # computing in parallel with torch.multiprocessing
-            pool = mp.Pool(self.num_threads)
-            for client_id in communicate_clients:
-                self.clients[client_id].update_device(next(utils.fmodule.dev_manager))
-                packages_received_from_clients.append(pool.apply_async(self.communicate_with, args=(int(client_id),)))
-            pool.close()
-            pool.join()
-            packages_received_from_clients = list(map(lambda x: x.get(), packages_received_from_clients))
-        for i,cid in enumerate(communicate_clients): client_package_buffer[cid] = packages_received_from_clients[i]
-        packages_received_from_clients = [client_package_buffer[cid] for cid in selected_clients if client_package_buffer[cid]]
-        self.received_clients = selected_clients
-        return self.unpack(packages_received_from_clients)
+    # def aggregate(self, models: list, client_indices=None, *args, **kwargs):
+    #     """
+    #     Aggregate the locally improved models.
+    #     :param
+    #         models: a list of local models
+    #     :return
+    #         the averaged result
+    #     pk = nk/n where n=self.data_vol
+    #     K = |S_t|
+    #     N = |S|
+    #     -------------------------------------------------------------------------------------------------------------------------
+    #      weighted_scale                 |uniform (default)          |weighted_com (original fedavg)   |other
+    #     ==========================================================================================================================
+    #     N/K * Σpk * model_k             |1/K * Σmodel_k             |(1-Σpk) * w_old + Σpk * model_k  |Σ(pk/Σpk) * model_k
+    #     """
+    #     if len(models) == 0: return self.model
+    #     if self.aggregation_option == 'weighted_scale':
+    #         if client_indices:
+    #             p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in client_indices]
+    #         else:
+    #             p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
+    #         K = len(models)
+    #         N = self.num_clients
+    #         return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)]) * N / K
+    #     elif self.aggregation_option == 'uniform':
+    #         return fmodule._model_average(models)
+    #     elif self.aggregation_option == 'weighted_com':
+    #         if client_indices:
+    #             p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in client_indices]
+    #         else:
+    #             p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
+    #         w = fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
+    #         return (1.0-sum(p))*self.model + w
+    #     else:
+    #         if client_indices:
+    #             p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in client_indices]
+    #         else:
+    #             p = [1.0 * self.local_data_vols[cid] / self.total_data_vol for cid in self.received_clients]
+    #         sump = sum(p)
+    #         p = [pk/sump for pk in p]
+    #         return fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
+    
+    # @fmodule.with_multi_gpus
+    # def test_on_clients(self, dataflag='valid'):
+    #     """
+    #     Validate accuracies and losses on clients' local datasets
+    #     :param
+    #         dataflag: choose train data or valid data to evaluate
+    #     :return
+    #         metrics: a dict contains the lists of each metric_value of the clients
+    #     """
+    #     all_metrics = collections.defaultdict(list)
+        
+    #     if self.num_threads > 1:
+    #         sample_client = self.clients[0]
+    #         with mp.Pool(processes=self.num_threads) as pool:
+    #             results =  pool.starmap_async(sample_client.test, [(client.model, dataflag) for client in self.clients])
+    #             results = results.get()
+    #             for result in results:
+    #                 for met_name, met_val in result.items():
+    #                     result[met_name].append(met_val)    
+    #         pool.close()
+    #     else :
+    #         for c in self.clients:
+    #             client_metrics = c.test(self.model, dataflag)
+    #             for met_name, met_val in client_metrics.items():
+    #                 all_metrics[met_name].append(met_val)
+    #     return all_metrics
+    
+    # @ss.with_dropout
+    # @ss.with_clock
+    # def communicate(self, selected_clients, local_store_path, asynchronous=False):
+    #     """
+    #     The whole simulating communication procedure with the selected clients.
+    #     This part supports for simulating the client dropping out.
+    #     :param
+    #         selected_clients: the clients to communicate with
+    #     :return
+    #         :the unpacked response from clients that is created ny self.unpack()
+    #     """
+    #     packages_received_from_clients = []
+    #     client_package_buffer = {}
+    #     communicate_clients = list(set(selected_clients))
+    #     for cid in communicate_clients:client_package_buffer[cid] = None
+    #     if self.num_threads <= 1:
+    #         # computing iteratively
+    #         for client_id in communicate_clients:
+    #             response_from_client_id = self.communicate_with(client_id)
+    #             torch.save(response_from_client_id['model'].state_dict(), os.path.join(local_store_path, f'client{client_id}_model.pt'))
+    #             packages_received_from_clients.append(response_from_client_id)
+    #     else:
+    #         # computing in parallel with torch.multiprocessing
+    #         pool = mp.Pool(self.num_threads)
+    #         for client_id in communicate_clients:
+    #             self.clients[client_id].update_device(next(utils.fmodule.dev_manager))
+                
+    #         packages_received_from_clients.append(pool.map_async(self.communicate_with, [int(client_id) for client_id in communicate_clients]))
+    #         pool.close()
+    #         pool.join()
+    #         packages_received_from_clients = list(map(lambda x: x.get(), packages_received_from_clients))
+    #     for i,cid in enumerate(communicate_clients): client_package_buffer[cid] = packages_received_from_clients[i]
+    #     packages_received_from_clients = [client_package_buffer[cid] for cid in selected_clients if client_package_buffer[cid]]
+    #     self.received_clients = selected_clients
+    #     return self.unpack(packages_received_from_clients)
 
-    @ss.with_latency
-    def communicate_with(self, client_id):
-        """
-        Pack the information that is needed for client_id to improve the global model
-        :param
-            client_id: the id of the client to communicate with
-        :return
-            client_package: the reply from the client and will be 'None' if losing connection
-        """
-        # package the necessary information
-        svr_pkg = self.pack(client_id)
-        # listen for the client's response
-        return self.clients[client_id].reply(svr_pkg)
+    # @ss.with_latency
+    # def communicate_with(self, client_id):
+    #     """
+    #     Pack the information that is needed for client_id to improve the global model
+    #     :param
+    #         client_id: the id of the client to communicate with
+    #     :return
+    #         client_package: the reply from the client and will be 'None' if losing connection
+    #     """
+    #     # package the necessary information
+    #     svr_pkg = self.pack(client_id)
+    #     # listen for the client's response
+    #     return self.clients[client_id].reply(svr_pkg)
     
     @ss.time_step
     def iterate(self, round, global_store_path, local_store_path):
@@ -364,23 +387,24 @@ class Server(BasicServer):
         # sample clients: MD sampling as default but with replacement=False
         self.selected_clients = self.sample()
         # training
-        clients_reply = self.communicate(self.selected_clients, local_store_path)
+        clients_reply = self.communicate(self.selected_clients)
         models = clients_reply['model']
         names = clients_reply['name']
         print("Round clients:", self.received_clients)
         # aggregate
         self.model = self.aggregate(models)
-        torch.save(self.model.state_dict(), os.path.join(global_store_path, 'global_model.pt'))
+        # torch.save(self.model.state_dict(), os.path.join(global_store_path, 'global_model.pt'))
         #testing phase
-        valid_accs = np.array(self.test_on_clients('valid')['accuracy'])
-        test_acc = self.test()
-        wandb.log({'Train accuracy': valid_accs.sum() / len(valid_accs), 'Test accuracy': test_acc['accuracy']})
+        # valid_accs = np.array(self.test_on_clients('valid')['accuracy'])
+        # test_acc = self.test()
+        # wandb.log({'Train accuracy': valid_accs.sum() / len(valid_accs), 'Test accuracy': test_acc['accuracy']})
         # calculate Shapley values
         if self.calculate_fl_SV:
             print('Finish training!')
             self.rnd_models_dict = dict()
             for model, name in zip(models, names):
                 self.rnd_models_dict[int(name.replace('Client', ''))] = model
+                # torch.save(model.state_dict(), os.path.join(local_store_path, 'client{}_model.pt'.format(int(name.replace('Client', '')))))
             print('Start to calculate FL SV round {}'.format(self.current_round))
             self.init_round()
             self.init_round_MID()

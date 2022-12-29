@@ -3,6 +3,8 @@ import collections
 import time
 import numpy as np
 import os
+from utils import fmodule
+
 try:
     import ujson as json
 except:
@@ -73,13 +75,15 @@ class Logger(logging.Logger):
             self.time_buf[key][-1] = time.time() - self.time_buf[key][-1]
             self.info("{:<30s}{:.4f}".format(key + ":", self.time_buf[key][-1]) + 's')
 
-    def save_output_as_json(self, filepath=None):
+    def save_output_as_json(self, filepath=None, suffix_log_filename=None):
         """Save the self.output as .json file"""
         if len(self.output) == 0: return
         self.organize_output()
         self.output_to_jsonable_dict()
         if filepath is None:
             filepath = os.path.join(self.get_output_path(),self.get_output_name())
+            if suffix_log_filename is not None:
+                filepath = filepath.replace('.json', '_' + suffix_log_filename + '.json')
         if not self.overwrite:
             if os.path.exists(filepath):
                 with open(filepath, 'r') as inf:
@@ -194,7 +198,7 @@ class Logger(logging.Logger):
 
     def initialize(self, *args, **kwargs):
         return
-
+    
     def log_once(self, *args, **kwargs):
         """This method is called at the beginning of each communication round of Server.
         The round-wise operations of recording should be complemented here."""
