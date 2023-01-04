@@ -205,7 +205,7 @@ class TaskGen(BasicTaskGen):
             p = np.arange(self.num_clients) + 1
             p = p ** (- self.skewness)
             p = p / p.sum()
-            samples_per_user = (p * 100000).astype(np.int64)
+            samples_per_user = (p * 10000).astype(np.int64)
         elif self.dist_id == 12:
             """Custom"""
             Us = np.random.normal(0, self.skewness, num_clients)

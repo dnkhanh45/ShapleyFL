@@ -41,22 +41,13 @@ class Server(BasicServer):
         self.sv_opt_logs = []
         
         if self.exact:
-            if self.previous_rnd_acc_for_empty_subset:
-                self.exact_dir = os.path.join('./SV_result', self.option['task'], 'non-zero-exact-{}'.format(self.clients_per_round))
-            else:
-                self.exact_dir = os.path.join('./SV_result', self.option['task'], 'delta-exact-{}'.format(self.clients_per_round))
+            self.exact_dir = os.path.join('./SV_result', self.option['task'], 'duong-exact-new{}'.format(self.clients_per_round))
             os.makedirs(self.exact_dir, exist_ok=True)
         if self.const_lambda:
-            if self.previous_rnd_acc_for_empty_subset:
-                self.const_lambda_dir = os.path.join('./SV_result', self.option['task'], 'non-zero-const_lambda-{}'.format(self.clients_per_round))
-            else:
-                self.const_lambda_dir = os.path.join('./SV_result', self.option['task'], 'const_lambda-{}'.format(self.clients_per_round))
+            self.const_lambda_dir = os.path.join('./SV_result', self.option['task'], 'duong-const_lambda-{}'.format(self.clients_per_round))
             os.makedirs(self.const_lambda_dir, exist_ok=True)
         if self.optimal_lambda:
-            if self.previous_rnd_acc_for_empty_subset:
-                self.optimal_lambda_dir = os.path.join('./SV_result', self.option['task'], 'non-zero-optimal_lambda-{}-{}'.format(self.clients_per_round, self.optimal_lambda_samples))
-            else:
-                self.optimal_lambda_dir = os.path.join('./SV_result', self.option['task'], 'optimal_lambda-{}-{}'.format(self.clients_per_round, self.optimal_lambda_samples))
+            self.optimal_lambda_dir = os.path.join('./SV_result', self.option['task'], 'duong-optimal_lambda-{}-{}'.format(self.clients_per_round, self.optimal_lambda_samples))
             os.makedirs(self.optimal_lambda_dir, exist_ok=True)
         
         # Variables used in round
@@ -67,7 +58,17 @@ class Server(BasicServer):
             self.previous_rnd_dict = None
             self.rnd_dict = None
             self.rnd_partitions = None
+            self.previous_rnd_model = None
         
+    def calculate_distance(self, model_a, model_b):
+        distance = 0.0
+        with torch.no_grad():
+            for param_a, param_b in zip(model_a.parameters(), model_b.parameters()):
+                # print(param_a.data.shape, param_b.data.shape)
+                distance += abs(param_a.data - param_b.data).sum()
+            # distance = torch.sqrt(distance)\
+        return distance.item()
+    
     
     def utility_function(self, client_indices_):
         if len(client_indices_) == 0:
@@ -76,8 +77,6 @@ class Server(BasicServer):
             return 0.0
         bitset_key = self.rnd_bitset(client_indices_).bits()
         if bitset_key in self.rnd_dict.keys():
-            if self.previous_rnd_dict is not None:
-                return self.rnd_dict[bitset_key] - self.previous_rnd_dict[bitset_key]
             return self.rnd_dict[bitset_key]
         models = [self.rnd_models_dict[index] for index in client_indices_]
         # New version:
@@ -85,13 +84,10 @@ class Server(BasicServer):
         p = p / p.sum()
         self.model = fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
         acc = self.test()['accuracy']
-        # self.rnd_dict[bitset_key] = acc - self.previous_rnd_acc
-        self.rnd_dict[bitset_key] = acc
-        if self.previous_rnd_dict is not None:
-            # if bitset_key[0] == '1' and (self.rnd_dict[bitset_key] < self.previous_rnd_dict[bitset_key]):
-            #     print(bitset_key, self.rnd_dict[bitset_key], self.previous_rnd_dict[bitset_key])
-            return self.rnd_dict[bitset_key] - self.previous_rnd_dict[bitset_key]
-        return self.rnd_dict[bitset_key]
+        # self.rnd_dict[bitset_key] = acc * self.calculate_distance(self.previous_rnd_model, self.model)
+        # self.rnd_dict[bitset_key] = self.calculate_distance(self.previous_rnd_model, self.model)
+        # print(f'Distance between aggregated model of {client_indices_} and previous model: {self.calculate_distance(self.previous_rnd_model, self.model)}')
+        return acc
     
     
     def shapley_value(self, client_index_, client_indices_):
@@ -116,7 +112,7 @@ class Server(BasicServer):
     def calculate_round_exact_SV(self):
         round_SV = np.zeros(self.num_clients)
         for client_index in range(self.num_clients):
-            round_SV[client_index] = self.shapley_value(
+            round_SV[client_index]= self.shapley_value(
                 client_index_=client_index,
                 client_indices_=self.received_clients
             )
@@ -186,11 +182,9 @@ class Server(BasicServer):
 
     def init_round(self):
         # Define variables used in round
-        self.previous_rnd_acc = self.test()['accuracy']
         self.rnd_bitset = bitset('round_bitset', tuple(range(self.num_clients)))
-        self.previous_rnd_dict = copy.deepcopy(self.rnd_dict)
         self.rnd_dict = dict()
-        # print("previous dict", self.previous_rnd_dict)
+        self.previous_rnd_model = copy.deepcopy(self.model)
         return
 
 
@@ -217,7 +211,7 @@ class Server(BasicServer):
             nodes_indexes = np.where(partitions == partition_index)[0]
             self.rnd_partitions.append(rnd_all_nodes[nodes_indexes])
         return
-
+    
     def run(self):
         """
         Start the federated learning symtem where the global model is trained iteratively.
@@ -260,7 +254,7 @@ class Server(BasicServer):
             # check if early stopping
             if flw.logger.early_stop(): break
             # federated train
-            self.iterate(round, global_store_path, local_store_path)
+            self.iterate(global_store_path, local_store_path)
             # decay learning rate
             self.global_lr_scheduler(round)
             flw.logger.time_end('Time Cost')
@@ -275,7 +269,7 @@ class Server(BasicServer):
         return
     
     @ss.time_step
-    def iterate(self, round, global_store_path, local_store_path):
+    def iterate(self, global_store_path, local_store_path):
         """
         The standard iteration of each federated round that contains three
         necessary procedure in FL: client selection, communication and model aggregation.
@@ -290,6 +284,10 @@ class Server(BasicServer):
         models = clients_reply['model']
         names = clients_reply['name']
         print("Round clients:", self.received_clients)
+        round_vars = np.zeros(self.num_clients)
+        for client_index in range(self.num_clients):
+            round_vars[client_index] = self.calculate_distance(self.model, models[client_index])
+            
         if self.calculate_fl_SV:
             print('Finish training!')
             self.rnd_models_dict = dict()
@@ -297,6 +295,7 @@ class Server(BasicServer):
                 self.rnd_models_dict[int(name.replace('Client', ''))] = model
                 store_name = int(name.replace('Client', ''))
                 torch.save(model.state_dict(), os.path.join(local_store_path, f'local_model{store_name}.pt'))
+                
                 
             print('Start to calculate FL SV round {}'.format(self.current_round))
             self.init_round()
@@ -308,22 +307,8 @@ class Server(BasicServer):
             print(round_SV)
             with open(os.path.join(self.exact_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
                 pickle.dump(round_SV, f)
-            tmp = os.path.join('./SV_result', self.option['task'], 'min_max')
-            os.makedirs(tmp, exist_ok=True)
-            with open(os.path.join(tmp, 'minRound{}.npy'.format(self.current_round)), 'wb') as f:
-                pickle.dump(np.array(min(self.rnd_dict.values())), f)
-            with open(os.path.join(tmp, 'maxRound{}.npy'.format(self.current_round)), 'wb') as f:
-                pickle.dump(np.array(max(self.rnd_dict.values())), f)
-            tmp = os.path.join('./SV_result', self.option['task'], 'client_accuracy-{}'.format(self.clients_per_round))
-            os.makedirs(tmp, exist_ok=True)
-            a = np.zeros(self.num_clients)
-            # print(self.rnd_dict)
-            for i in self.received_clients:
-                a[i] = (self.rnd_dict[self.rnd_bitset([i]).bits()])
-            print("accuracy", a)
-            with open(os.path.join(tmp, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
-                pickle.dump(a, f)
-            # print("current round dict", self.rnd_dict)
+            with open(os.path.join(self.exact_dir, 'Var_round{}.npy'.format(self.current_round)), 'wb') as f1:
+                pickle.dump(round_vars, f1)
         if self.const_lambda:
             print('Const lambda FL SV', end=': ')
             round_SV = self.calculate_round_const_lambda_SV()

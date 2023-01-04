@@ -1,7 +1,7 @@
 TASK="synthetic_classification"
-DIST=11
+DIST=10
 SKEW=1.0
-NUM_CLIENTS=10
+NUM_CLIENTS=5
 SEED=0
 python generate_fedtask.py --benchmark $TASK --dist $DIST --skew $SKEW --num_clients $NUM_CLIENTS --seed $SEED
 
@@ -9,22 +9,23 @@ TASK="${TASK}_cnum${NUM_CLIENTS}_dist${DIST}_skew${SKEW}_seed${SEED}"
 GPU_IDS=( 1 )
 NUM_THREADS=1
 BATCH_SIZE=10
-NUM_ROUNDS=100
+NUM_ROUNDS=50
 PROPORTION=1.0
-    
+
 python main.py \
     --task $TASK \
     --model lr \
-    --algorithm fedavg \
+    --algorithm sv_duong \
     --num_rounds $NUM_ROUNDS \
     --num_epochs 2 \
-    --learning_rate 0.5 \
+    --learning_rate 0.01 \
     --lr_scheduler 0 \
     --learning_rate_decay 1.0 \
-    --proportion 1 \
+    --proportion $PROPORTION \
     --batch_size $BATCH_SIZE \
     --eval_interval 1 \
     --gpu $GPU_IDS \
     --num_threads $NUM_THREADS \
     --aggregate weighted_scale \
-    --sample full
+    --sample full \
+    --exact

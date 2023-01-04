@@ -1,5 +1,5 @@
 TASK="synthetic_classification"
-DIST=11
+DIST=10
 SKEW=1.0
 NUM_CLIENTS=10
 SEED=0
@@ -11,20 +11,21 @@ NUM_THREADS=1
 BATCH_SIZE=10
 NUM_ROUNDS=100
 PROPORTION=1.0
-    
+
 python main.py \
     --task $TASK \
     --model lr \
-    --algorithm fedavg \
+    --algorithm sv_test \
     --num_rounds $NUM_ROUNDS \
     --num_epochs 2 \
     --learning_rate 0.5 \
     --lr_scheduler 0 \
     --learning_rate_decay 1.0 \
-    --proportion 1 \
+    --proportion $PROPORTION \
     --batch_size $BATCH_SIZE \
     --eval_interval 1 \
     --gpu $GPU_IDS \
     --num_threads $NUM_THREADS \
     --aggregate weighted_scale \
-    --sample full
+    --sample full \
+    --exact
