@@ -28,7 +28,7 @@ DATA_DIR=benchmark/RAW_DATA/MNIST
 TASK="mnist_classification"
 DIST=1
 SKEW=0.5
-NUM_CLIENTS=3
+NUM_CLIENTS=10
 SEED=0
 python generate_fedtask.py --benchmark $TASK --dist $DIST --skew $SKEW --num_clients $NUM_CLIENTS --seed $SEED
 
@@ -36,7 +36,7 @@ TASK="${TASK}_cnum${NUM_CLIENTS}_dist${DIST}_skew${SKEW}_seed${SEED}"
 GPU_IDS=( 1 )
 NUM_THREADS=1
 BATCH_SIZE=32
-NUM_ROUNDS=1
+NUM_ROUNDS=20
 PROPORTION=1.0
     
 python main.py \
