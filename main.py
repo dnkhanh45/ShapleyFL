@@ -1,12 +1,13 @@
 import utils.fflow as flw
 import torch
 import wandb
+import time
 
 def main():
     # read options
     option = flw.read_option()
     wandb.init(
-        project='ShapleyValue',
+        project='SV_FL',
         name="FedSV_{}".format(option['task']),
         group=f"{option['task'].split('_')[0]}",
         tags=[option['task'].split('_')[2], option['task'].split('_')[3], option['task'].split('_')[4]],
@@ -19,7 +20,10 @@ def main():
     server = flw.initialize(option)
     # start federated optimization
     try:
+        start = time.time()
         server.run()
+        end = time.time()
+
     except:
         # log the exception that happens during training-time
         flw.logger.exception("Exception Logged")

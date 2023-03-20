@@ -97,6 +97,7 @@ class Logger(logging.Logger):
         try:
             with open(filepath, 'w') as outf:
                 json.dump(dict(self.output), outf)
+            return filepath
         except:
             self.error('Failed to save flw.logger.output as results')
             
@@ -106,6 +107,12 @@ class Logger(logging.Logger):
             if suffix_log_filename is not None:
                 filepath = filepath.replace('.json', '_' + suffix_log_filename + '.json')
         return os.path.exists(filepath)
+    
+    def add_time(self, total=None, calculate_SV=None):
+        self.output["time"] = {
+            "total": total,
+            "calculate_SV": calculate_SV
+        }
 
     def check_is_jsonable(self, x):
         try:

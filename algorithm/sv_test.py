@@ -16,6 +16,8 @@ import collections
 import copy
 import json
 import wandb
+import utils.fflow as flw
+import time
 
 class Server(BasicServer):
     def __init__(
@@ -40,8 +42,10 @@ class Server(BasicServer):
         if self.exact:
             self.exact_dir = os.path.join('./SV_result', self.option['task'], 'exact-{}'.format(self.clients_per_round))
             os.makedirs(self.exact_dir, exist_ok=True)
-            self.exact_dict_dir = os.path.join('./SV_result', self.option['task'], 'exact-dict-{}'.format(self.clients_per_round))
-            os.makedirs(self.exact_dict_dir, exist_ok=True)
+            self.acc_dir = os.path.join('./SV_result', self.option['task'], 'accuracy')
+            os.makedirs(self.acc_dir, exist_ok=True)
+            self.loss_dir = os.path.join('./SV_result', self.option['task'], 'loss')
+            os.makedirs(self.loss_dir, exist_ok=True)
         if self.const_lambda:
             self.const_lambda_dir = os.path.join('./SV_result', self.option['task'], 'const_lambda-{}'.format(self.clients_per_round))
             os.makedirs(self.const_lambda_dir, exist_ok=True)
@@ -54,10 +58,49 @@ class Server(BasicServer):
             self.previous_rnd_acc = None
             self.rnd_models_dict = None
             self.rnd_bitset = None
-            self.previous_rnd_dict = None
-            self.rnd_dict = None
+            self.previous_rnd_acc_dict = None
+            self.rnd_acc_dict = None
             self.rnd_partitions = None
+            self.rnd_loss_dict = None
+            self.calculate_SV_time = 0.0
         
+
+    def run(self):
+        """
+        Start the federated learning symtem where the global model is trained iteratively.
+        """
+        flw.logger.time_start('Total Time Cost')
+        start = time.time()
+        for round in range(1, self.num_rounds+1):
+            self.current_round = round
+            # using logger to evaluate the model
+            flw.logger.info("--------------Round {}--------------".format(round))
+            flw.logger.time_start('Time Cost')
+            if flw.logger.check_if_log(round, self.eval_interval):
+                flw.logger.time_start('Eval Time Cost')
+                flw.logger.log_once()
+                flw.logger.time_end('Eval Time Cost')
+            # check if early stopping
+            if flw.logger.early_stop(): break
+            # federated train
+            self.iterate()
+            # decay learning rate
+            self.global_lr_scheduler(round)
+            flw.logger.time_end('Time Cost')
+        flw.logger.info("--------------Final Evaluation--------------")
+        flw.logger.time_start('Eval Time Cost')
+        flw.logger.log_once()
+        flw.logger.time_end('Eval Time Cost')
+        flw.logger.info("=================End==================")
+        flw.logger.time_end('Total Time Cost')
+        end = time.time()
+        # save time
+        flw.logger.add_time(total=(end - start), calculate_SV=self.calculate_SV_time)
+        # save results as .json file
+        log_filepath = flw.logger.save_output_as_json()
+        wandb.save(log_filepath)
+        return
+    
     
     def utility_function(self, client_indices_):
         if len(client_indices_) == 0:
@@ -65,20 +108,23 @@ class Server(BasicServer):
             #     return self.previous_rnd_acc
             return 0.0
         bitset_key = self.rnd_bitset(client_indices_).bits()
-        if bitset_key in self.rnd_dict.keys():
-            # if self.previous_rnd_dict:
-            #     return self.rnd_dict[bitset_key] - self.previous_rnd_dict[bitset_key]
-            return self.rnd_dict[bitset_key]
+        if bitset_key in self.rnd_acc_dict.keys():
+            # if self.previous_rnd_acc_dict:
+            #     return self.rnd_acc_dict[bitset_key] - self.previous_rnd_acc_dict[bitset_key]
+            return self.rnd_acc_dict[bitset_key]
         models = [self.rnd_models_dict[index] for index in client_indices_]
         # New version:
         p = np.array([self.local_data_vols[cid] for cid in client_indices_])
         p = p / p.sum()
         self.model = fmodule._model_sum([model_k * pk for model_k, pk in zip(models, p)])
-        acc = self.test()['accuracy']
-        self.rnd_dict[bitset_key] = acc
-        # if self.previous_rnd_dict:
-        #     return self.rnd_dict[bitset_key] - self.previous_rnd_dict[bitset_key]
-        return self.rnd_dict[bitset_key]
+        result = self.test()
+        acc = result['accuracy']
+        self.rnd_acc_dict[bitset_key] = acc
+        loss = result['loss']
+        self.rnd_loss_dict[bitset_key] = loss
+        # if self.previous_rnd_acc_dict:
+        #     return self.rnd_acc_dict[bitset_key] - self.previous_rnd_acc_dict[bitset_key]
+        return self.rnd_acc_dict[bitset_key]
     
     
     def shapley_value(self, client_index_, client_indices_):
@@ -174,8 +220,9 @@ class Server(BasicServer):
     def init_round(self):
         # Define variables used in round
         self.rnd_bitset = bitset('round_bitset', tuple(range(self.num_clients)))
-        self.previous_rnd_dict = copy.deepcopy(self.rnd_dict)
-        self.rnd_dict = dict()
+        self.previous_rnd_acc_dict = copy.deepcopy(self.rnd_acc_dict)
+        self.rnd_acc_dict = dict()
+        self.rnd_loss_dict = dict()
         return
 
 
@@ -220,6 +267,7 @@ class Server(BasicServer):
         names = clients_reply['name']
         print("Round clients:", self.received_clients)
         if self.calculate_fl_SV:
+            start = time.time()
             print('Finish training!')
             self.rnd_models_dict = dict()
             for model, name in zip(models, names):
@@ -229,16 +277,24 @@ class Server(BasicServer):
             self.init_round()
             if self.const_lambda or self.optimal_lambda:
                 self.init_round_MID()
+            end = time.time()
+            self.calculate_SV_time += (end - start)
             print('Finish init round!')
         if self.exact:
+            start = time.time()
             print('Exact FL SV', end=': ')
             round_SV = self.calculate_round_exact_SV()
+            end = time.time()
+            self.calculate_SV_time += (end - start)
             print(round_SV)
             # with open(os.path.join(self.exact_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
             #     pickle.dump(round_SV, f)
-            with open(os.path.join(self.exact_dict_dir, 'Round{}.json'.format(self.current_round)), 'w') as f:
-                json.dump(self.rnd_dict, f)
-            wandb.save(os.path.join(self.exact_dict_dir, 'Round{}.json'.format(self.current_round)))
+            with open(os.path.join(self.acc_dir, 'Round{}.json'.format(self.current_round)), 'w') as f:
+                json.dump(self.rnd_acc_dict, f)
+            wandb.save(os.path.join(self.acc_dir, 'Round{}.json'.format(self.current_round)))
+            with open(os.path.join(self.loss_dir, 'Round{}.json'.format(self.current_round)), 'w') as f:
+                json.dump(self.rnd_loss_dict, f)
+            wandb.save(os.path.join(self.loss_dir, 'Round{}.json'.format(self.current_round)))
         if self.const_lambda:
             print('Const lambda FL SV', end=': ')
             round_SV = self.calculate_round_const_lambda_SV()
