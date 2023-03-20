@@ -20,6 +20,6 @@ chkpts/
 /checkpoint/
 /.ipynb_checkpoints/
 /plots/
-SV_result/
-visualize/
-plot/
+/SV_result/
+/visualize/
+/plot/
