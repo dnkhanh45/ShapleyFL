@@ -64,16 +64,15 @@ def read_option():
     parser.add_argument('--log_file', help='bool controls whether log to file and default value is False', action="store_true", default=False)
     parser.add_argument('--no_log_console', help='bool controls whether log to screen and default value is True', action="store_true", default=False)
     parser.add_argument('--no_overwrite', help='bool controls whether to overwrite the old result', action="store_true", default=False)
-    # FL SV
+    # Federated SV
     parser.add_argument('--exact', help="Calculate FL exact SV", action='store_true')
     parser.add_argument('--num_partitions', help="Calculate FL SV MID number of partitions", type=int, default=1)
     parser.add_argument('--const_lambda', help="Calculate FL const_lambda SV", action='store_true')
     parser.add_argument('--optimal_lambda', help="Calculate FL optimal_lambda SV", action='store_true')
     parser.add_argument('--optimal_lambda_samples', help="FL optimal_lambda SV number of samples", type=int, default=300)
-    parser.add_argument('--previous_rnd_acc_for_empty_subset', help="Use previous round accuracy as utility function result for empty subset", action='store_true')
-    # central SV
+    # Ideal/Central SV
     parser.add_argument('--log_folder', help='Store experiment files', type=str, default=None)
-    parser.add_argument('--start', help='Id of start subset', type=int, default=0)
+    parser.add_argument('--start', help='Id of start subset', type=int, default=1)
     parser.add_argument('--end', help='Id of end subset', type=int, default=-1)
     parser.add_argument('--method', help='How to calculate SV', type=str)
     # remote run

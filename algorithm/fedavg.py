@@ -10,6 +10,8 @@ class Server(BasicServer):
         Start the federated learning symtem where the global model is trained iteratively.
         """
         flw.logger.time_start('Total Time Cost')
+        if flw.logger.check_exist(suffix_log_filename=suffix_log_filename):
+            return
         for round in range(1, self.num_rounds+1):
             self.current_round = round
             # using logger to evaluate the model

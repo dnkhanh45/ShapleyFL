@@ -48,7 +48,7 @@ import ujson
 import random
 
 class TaskGen(BasicTaskGen):
-    def __init__(self, num_classes=10, dimension=60, dist_id = 0, num_clients = 30, skewness = 0.5, minvol=800, rawdata_path ='./benchmark/RAW_DATA/SYNTHETIC', seed=0, option=None):
+    def __init__(self, num_classes=10, dimension=60, dist_id = 0, num_clients = 30, skewness = 0.5, minvol=2000, rawdata_path ='./benchmark/RAW_DATA/SYNTHETIC', seed=0, option=None):
         super(TaskGen, self).__init__(benchmark='synthetic_classification',
                                       dist_id=dist_id,
                                       skewness=skewness,
@@ -235,6 +235,7 @@ class TaskGen(BasicTaskGen):
 class TaskPipe(XYTaskPipe):
     @classmethod
     def load_task(cls, task_path, data_path=None):
+        print('Task path: ', task_path)
         with open(os.path.join(task_path, 'data.json'), 'r') as inf:
             feddata = ujson.load(inf)
         test_data = cls.TaskDataset(feddata['dtest']['x'], feddata['dtest']['y'])

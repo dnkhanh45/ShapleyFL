@@ -8,7 +8,7 @@ __pycache__/
 .vscode*
 /utils/figures/
 # *.txt
-test*
+# test*
 # *.pt
 *.gz
 *-ubyte
@@ -20,3 +20,6 @@ chkpts/
 /checkpoint/
 /.ipynb_checkpoints/
 /plots/
+SV_result/
+visualize/
+plot/

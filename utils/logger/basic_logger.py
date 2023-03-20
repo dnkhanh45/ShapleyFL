@@ -99,6 +99,13 @@ class Logger(logging.Logger):
                 json.dump(dict(self.output), outf)
         except:
             self.error('Failed to save flw.logger.output as results')
+            
+    def check_exist(self, filepath=None, suffix_log_filename=None):
+        if filepath is None:
+            filepath = os.path.join(self.get_output_path(),self.get_output_name())
+            if suffix_log_filename is not None:
+                filepath = filepath.replace('.json', '_' + suffix_log_filename + '.json')
+        return os.path.exists(filepath)
 
     def check_is_jsonable(self, x):
         try:

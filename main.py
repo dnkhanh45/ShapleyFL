@@ -5,14 +5,15 @@ import wandb
 def main():
     # read options
     option = flw.read_option()
-    # wandb.init(
-    #     project='ShapleyValue',
-    #     name=f"{option['task']}",
-    #     group=f"{option['task'].split('_')[0]}",
-    #     tags=[option['task'].split('_')[2], option['task'].split('_')[3], option['task'].split('_')[4]],
-    #     config=option
-    # )
+    wandb.init(
+        project='ShapleyValue',
+        name="FedSV_{}".format(option['task']),
+        group=f"{option['task'].split('_')[0]}",
+        tags=[option['task'].split('_')[2], option['task'].split('_')[3], option['task'].split('_')[4]],
+        config=option
+    )
     # set random seed
+    print(option)
     flw.setup_seed(option['seed'])
     # initialize server, clients and fedtask
     server = flw.initialize(option)
