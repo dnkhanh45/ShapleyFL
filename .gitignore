@@ -23,3 +23,5 @@ chkpts/
 /SV_result/
 /visualize/
 /plot/
+*.npy
+*.ipynb
