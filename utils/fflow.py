@@ -102,7 +102,7 @@ def initialize(option):
             break
         except:
             continue
-    logger = Logger(meta=option, name=log_name, level=option['log_level'])
+    logger = Logger(meta=option, log_folder=option['log_folder'], name=log_name, level=option['log_level'])
     logger.info('Using Logger in `{}`'.format(log_path))
     logger.info("Initializing fedtask: {}".format(option['task']))
     # benchmark information

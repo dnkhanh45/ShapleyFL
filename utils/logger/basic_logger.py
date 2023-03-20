@@ -24,8 +24,10 @@ class Logger(logging.Logger):
         "CRITICAL": logging.CRITICAL,
     }
 
-    def __init__(self, meta, *args, **kwargs):
+    def __init__(self, meta, log_folder=None, *args, **kwargs):
         self.meta = meta
+        self.log_folder = log_folder
+        print("LOG FOLDER", self.log_folder)
         super(Logger, self).__init__(*args, **kwargs)
         self.output = collections.defaultdict(list)
         self.current_round = -1
@@ -81,9 +83,14 @@ class Logger(logging.Logger):
         self.organize_output()
         self.output_to_jsonable_dict()
         if filepath is None:
-            filepath = os.path.join(self.get_output_path(),self.get_output_name())
+            if self.log_folder:
+                filepath =  os.path.join(self.log_folder, self.meta['task'], self.get_output_name())
+                os.makedirs(filepath.rsplit('/', 1)[0], exist_ok=True)
+            else:
+                filepath = os.path.join(self.get_output_path(), self.get_output_name())
             if suffix_log_filename is not None:
                 filepath = filepath.replace('.json', '_' + suffix_log_filename + '.json')
+            print("FILEPATH", filepath)
         if not self.overwrite:
             if os.path.exists(filepath):
                 with open(filepath, 'r') as inf:
@@ -98,7 +105,7 @@ class Logger(logging.Logger):
             with open(filepath, 'w') as outf:
                 json.dump(dict(self.output), outf)
             return filepath
-        except:
+        except Exception as e:
             self.error('Failed to save flw.logger.output as results')
             
     def check_exist(self, filepath=None, suffix_log_filename=None):

@@ -99,6 +99,7 @@ class Server(BasicServer):
         # save results as .json file
         log_filepath = flw.logger.save_output_as_json()
         wandb.save(log_filepath)
+        print("LOG FILEPATH", log_filepath)
         return
     
     
