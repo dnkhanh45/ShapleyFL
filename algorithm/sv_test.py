@@ -2,8 +2,8 @@ from .fedbase import BasicServer, BasicClient
 import torch
 import os
 import numpy as np
-import networkx as nx
-import metis
+# import networkx as nx
+# import metis
 from bitsets import bitset
 from utils import fmodule
 from tqdm.auto import tqdm
@@ -46,12 +46,12 @@ class Server(BasicServer):
             os.makedirs(self.acc_dir, exist_ok=True)
             self.loss_dir = os.path.join('./SV_result', self.option['task'], 'loss')
             os.makedirs(self.loss_dir, exist_ok=True)
-        if self.const_lambda:
-            self.const_lambda_dir = os.path.join('./SV_result', self.option['task'], 'const_lambda-{}'.format(self.clients_per_round))
-            os.makedirs(self.const_lambda_dir, exist_ok=True)
-        if self.optimal_lambda:
-            self.optimal_lambda_dir = os.path.join('./SV_result', self.option['task'], 'optimal_lambda-{}-{}'.format(self.clients_per_round, self.optimal_lambda_samples))
-            os.makedirs(self.optimal_lambda_dir, exist_ok=True)
+        # if self.const_lambda:
+        #     self.const_lambda_dir = os.path.join('./SV_result', self.option['task'], 'const_lambda-{}'.format(self.clients_per_round))
+        #     os.makedirs(self.const_lambda_dir, exist_ok=True)
+        # if self.optimal_lambda:
+        #     self.optimal_lambda_dir = os.path.join('./SV_result', self.option['task'], 'optimal_lambda-{}-{}'.format(self.clients_per_round, self.optimal_lambda_samples))
+            # os.makedirs(self.optimal_lambda_dir, exist_ok=True)
         
         # Variables used in round
         if self.calculate_fl_SV:
@@ -226,29 +226,29 @@ class Server(BasicServer):
         return
 
 
-    def init_round_MID(self):
-        # Build graph
-        edges = list()
-        for u in self.received_clients:
-            for v in self.received_clients:
-                if u >= v:
-                    continue
-                w = self.utility_function([u]) + self.utility_function([v]) - self.utility_function([u, v])
-                w *= len(self.test_data)
-                w = abs(int(np.round(w)))
-                edges.append((u, v, w))
-        rnd_graph = nx.Graph()
-        rnd_graph.add_weighted_edges_from(edges)
-        rnd_graph.graph['edge_weight_attr'] = 'weight'
-        rnd_all_nodes = np.array(rnd_graph.nodes)
+    # def init_round_MID(self):
+    #     # Build graph
+    #     edges = list()
+    #     for u in self.received_clients:
+    #         for v in self.received_clients:
+    #             if u >= v:
+    #                 continue
+    #             w = self.utility_function([u]) + self.utility_function([v]) - self.utility_function([u, v])
+    #             w *= len(self.test_data)
+    #             w = abs(int(np.round(w)))
+    #             edges.append((u, v, w))
+    #     rnd_graph = nx.Graph()
+    #     rnd_graph.add_weighted_edges_from(edges)
+    #     rnd_graph.graph['edge_weight_attr'] = 'weight'
+    #     rnd_all_nodes = np.array(rnd_graph.nodes)
 
-        # Partition graph
-        self.rnd_partitions = list()
-        cutcost, partitions = metis.part_graph(rnd_graph, nparts=self.num_partitions, recursive=True)
-        for partition_index in np.unique(partitions):
-            nodes_indexes = np.where(partitions == partition_index)[0]
-            self.rnd_partitions.append(rnd_all_nodes[nodes_indexes])
-        return
+    #     # Partition graph
+    #     self.rnd_partitions = list()
+    #     cutcost, partitions = metis.part_graph(rnd_graph, nparts=self.num_partitions, recursive=True)
+    #     for partition_index in np.unique(partitions):
+    #         nodes_indexes = np.where(partitions == partition_index)[0]
+    #         self.rnd_partitions.append(rnd_all_nodes[nodes_indexes])
+    #     return
     
     @ss.time_step
     def iterate(self):
@@ -295,18 +295,18 @@ class Server(BasicServer):
             with open(os.path.join(self.loss_dir, 'Round{}.json'.format(self.current_round)), 'w') as f:
                 json.dump(self.rnd_loss_dict, f)
             wandb.save(os.path.join(self.loss_dir, 'Round{}.json'.format(self.current_round)))
-        if self.const_lambda:
-            print('Const lambda FL SV', end=': ')
-            round_SV = self.calculate_round_const_lambda_SV()
-            print(round_SV)
-            # with open(os.path.join(self.const_lambda_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
-            #     pickle.dump(round_SV, f)
-        if self.optimal_lambda:
-            print('Optimal lambda FL SV', end=': ')
-            round_SV = self.calculate_round_optimal_lambda_SV()
-            print(round_SV)
-            # with open(os.path.join(self.optimal_lambda_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
-            #     pickle.dump(round_SV, f)
+        # if self.const_lambda:
+        #     print('Const lambda FL SV', end=': ')
+        #     round_SV = self.calculate_round_const_lambda_SV()
+        #     print(round_SV)
+        #     # with open(os.path.join(self.const_lambda_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
+        #     #     pickle.dump(round_SV, f)
+        # if self.optimal_lambda:
+        #     print('Optimal lambda FL SV', end=': ')
+        #     round_SV = self.calculate_round_optimal_lambda_SV()
+        #     print(round_SV)
+        #     # with open(os.path.join(self.optimal_lambda_dir, 'Round{}.npy'.format(self.current_round)), 'wb') as f:
+        #     #     pickle.dump(round_SV, f)
         # aggregate
         self.model = self.aggregate(models)
         self.previous_rnd_acc = self.test()['accuracy']
