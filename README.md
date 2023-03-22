@@ -82,4 +82,14 @@ bash ./script/new/cifar100_ideal6.sh
 bash ./script/new/cifar100_ideal7.sh
 bash ./script/new/cifar100_ideal8.sh
 bash ./script/new/cifar100_ideal9.sh
+
+<!-- MNIST -->
+bash ./script/new/mnist_ideal0.sh
+bash ./script/new/mnist_ideal1.sh
+bash ./script/new/mnist_ideal2.sh
+bash ./script/new/mnist_ideal3.sh
+bash ./script/new/mnist_ideal4.sh
+bash ./script/new/mnist_ideal5.sh
+bash ./script/new/mnist_ideal6.sh
+bash ./script/new/mnist_ideal7.sh
 ```

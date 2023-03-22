@@ -26,7 +26,7 @@ cd ./ShapleyFL
 
 mkdir ./fedtask  #### Should add the save directory to be the option of generate_fedtask. And using this directory to be the input of main.py
 
-TASK="cifar100_classification"
+TASK="cifar10_classification"
 DIST=1
 SKEW=0.5
 NUM_CLIENTS=10
