@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -l rt_G.small=1
 #$ -l h_rt=36:00:00
-#$ -o /home/aaa10078nj/Federated_Learning/ShapleyValueFL/logs/cifar10/$JOB_NAME_$JOB_ID.log
+#$ -o /home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/mnist/$JOB_NAME_$JOB_ID.log
 #$ -j y
 
 source /etc/profile.d/modules.sh
@@ -14,7 +14,7 @@ module load nccl/2.11/2.11.4-1
 module load python/3.10/3.10.4
 source ~/venv/pytorch1.11+horovod/bin/activate
 
-LOG_DIR="/home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/cifar10/$JOB_NAME_$JOB_ID"
+LOG_DIR="/home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/mnist/$JOB_NAME_$JOB_ID"
 rm -r ${LOG_DIR}
 mkdir ${LOG_DIR}
 

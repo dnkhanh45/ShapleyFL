@@ -12,7 +12,7 @@ BATCH_SIZE=32
 NUM_ROUNDS=50
 PROPORTION=1.0
     
-python main.py \
+python main_ideal.py \
     --task $TASK \
     --model cnn \
     --algorithm fedavg \

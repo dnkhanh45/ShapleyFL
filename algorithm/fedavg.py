@@ -1,5 +1,6 @@
 from .fedbase import BasicServer, BasicClient
 import utils.fflow as flw
+import wandb
 
 class Server(BasicServer):
     def __init__(self, option, model, clients, test_data = None):
@@ -35,7 +36,9 @@ class Server(BasicServer):
         flw.logger.info("=================End==================")
         flw.logger.time_end('Total Time Cost')
         # save results as .json file
-        flw.logger.save_output_as_json(suffix_log_filename=suffix_log_filename)
+        log_filepath = flw.logger.save_output_as_json(suffix_log_filename=suffix_log_filename)
+        wandb.save(log_filepath)
+        print("LOG FILEPATH", log_filepath)
         return
 
 class Client(BasicClient):

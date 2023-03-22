@@ -59,5 +59,5 @@ pip install bitsets
 # Run experiments:
 Run independently
 ```
-bash ./script/new/mnist_fed.sh
+bash ./script/new/cifar10_ideal0.sh
 ```
