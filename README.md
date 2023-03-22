@@ -59,5 +59,27 @@ pip install bitsets
 # Run experiments:
 Run independently
 ```
+<!-- CIFAR-10 -->
 bash ./script/new/cifar10_ideal0.sh
+bash ./script/new/cifar10_ideal1.sh
+bash ./script/new/cifar10_ideal2.sh
+bash ./script/new/cifar10_ideal3.sh
+bash ./script/new/cifar10_ideal4.sh
+bash ./script/new/cifar10_ideal5.sh
+bash ./script/new/cifar10_ideal6.sh
+bash ./script/new/cifar10_ideal7.sh
+bash ./script/new/cifar10_ideal8.sh
+bash ./script/new/cifar10_ideal9.sh
+
+<!-- CIFAR-100 -->
+bash ./script/new/cifar100_ideal0.sh
+bash ./script/new/cifar100_ideal1.sh
+bash ./script/new/cifar100_ideal2.sh
+bash ./script/new/cifar100_ideal3.sh
+bash ./script/new/cifar100_ideal4.sh
+bash ./script/new/cifar100_ideal5.sh
+bash ./script/new/cifar100_ideal6.sh
+bash ./script/new/cifar100_ideal7.sh
+bash ./script/new/cifar100_ideal8.sh
+bash ./script/new/cifar100_ideal9.sh
 ```
