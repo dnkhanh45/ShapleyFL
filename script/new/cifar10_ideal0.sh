@@ -20,7 +20,7 @@ mkdir ${LOG_DIR}
 
 # #Dataset
 DATA_DIR="$SGE_LOCALDIR/$JOB_ID/"
-cp -r ./ShapleyFL/benchmark/RAW_DATA/CIFAR100 ${DATA_DIR}
+cp -r ./ShapleyFL/benchmark/RAW_DATA/CIFAR10 ${DATA_DIR}
 cd ./ShapleyFL
 # DATA_DIR=benchmark/RAW_DATA/CIFAR100
 
