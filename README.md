@@ -70,6 +70,16 @@ bash ./script/part2/cifar10_ideal6.sh
 bash ./script/part2/cifar10_ideal7.sh
 bash ./script/part2/cifar10_ideal8.sh
 bash ./script/part2/cifar10_ideal9.sh
+bash ./script/part2/cifar10_ideal0a.sh
+bash ./script/part2/cifar10_ideal1a.sh
+bash ./script/part2/cifar10_ideal2a.sh
+bash ./script/part2/cifar10_ideal3a.sh
+bash ./script/part2/cifar10_ideal4a.sh
+bash ./script/part2/cifar10_ideal5a.sh
+bash ./script/part2/cifar10_ideal6a.sh
+bash ./script/part2/cifar10_ideal7a.sh
+bash ./script/part2/cifar10_ideal8a.sh
+bash ./script/part2/cifar10_ideal9a.sh
 
 <!-- CIFAR-100 -->
 bash ./script/part2/cifar100_ideal0.sh
@@ -82,4 +92,14 @@ bash ./script/part2/cifar100_ideal6.sh
 bash ./script/part2/cifar100_ideal7.sh
 bash ./script/part2/cifar100_ideal8.sh
 bash ./script/part2/cifar100_ideal9.sh
+bash ./script/part2/cifar100_ideal0a.sh
+bash ./script/part2/cifar100_ideal1a.sh
+bash ./script/part2/cifar100_ideal2a.sh
+bash ./script/part2/cifar100_ideal3a.sh
+bash ./script/part2/cifar100_ideal4a.sh
+bash ./script/part2/cifar100_ideal5a.sh
+bash ./script/part2/cifar100_ideal6a.sh
+bash ./script/part2/cifar100_ideal7a.sh
+bash ./script/part2/cifar100_ideal8a.sh
+bash ./script/part2/cifar100_ideal9a.sh
 ```
