@@ -22,7 +22,8 @@ def main():
     wandb.init(
         project='SV_FL',
         name="IdealSV_start_{}_end_{}_{}".format(start, end, option['task']),
-        group=f"{option['task'].split('_')[0]}",
+        group=f"{option['task'].split('_')[0]}_part2",
+        entity="aiotlab",
         tags=["ideal", option['task'].split('_')[2], option['task'].split('_')[3], option['task'].split('_')[4]],
         config=option
     )

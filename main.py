@@ -7,6 +7,7 @@ def main():
     # read options
     option = flw.read_option()
     wandb.init(
+        entity="aiotlab",
         project='SV_FL',
         name="FedSV_{}".format(option['task']),
         group=f"{option['task'].split('_')[0]}",
