@@ -35,9 +35,7 @@ class Server(BasicServer):
         self.optimal_lambda = option['optimal_lambda']
         self.optimal_lambda_samples = min(pow(2, self.clients_per_round) - 1, option['optimal_lambda_samples'])
         self.calculate_fl_SV = self.exact or self.const_lambda or self.optimal_lambda
-        self.sv_const_logs = []
-        self.sv_exact_logs = []
-        self.sv_opt_logs = []
+        self.start_round = option['start_round']
         
         if self.exact:
             self.exact_dir = os.path.join('./SV_result', self.option['task'], 'exact-{}'.format(self.clients_per_round))
@@ -281,7 +279,7 @@ class Server(BasicServer):
             end = time.time()
             self.calculate_SV_time += (end - start)
             print('Finish init round!')
-        if self.exact:
+        if self.exact and (self.current_round >= self.start_round):
             start = time.time()
             print('Exact FL SV', end=': ')
             round_SV = self.calculate_round_exact_SV()

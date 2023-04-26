@@ -2,7 +2,7 @@
 #$ -cwd
 #$ -l rt_G.small=1
 #$ -l h_rt=36:00:00
-#$ -o /home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/cifar100/$JOB_NAME_$JOB_ID.log
+#$ -o /home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/cifar10/$JOB_NAME_$JOB_ID.log
 #$ -j y
 
 # source /etc/profile.d/modules.sh
@@ -14,7 +14,7 @@
 # module load python/3.10/3.10.4
 # source ~/venv/pytorch1.11+horovod/bin/activate
 
-# LOG_DIR="/home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/cifar100/$JOB_NAME_$JOB_ID"
+# LOG_DIR="/home/aaa10078nj/Federated_Learning/Khanh_SV_FL/logs/cifar10/$JOB_NAME_$JOB_ID"
 # rm -r ${LOG_DIR}
 # mkdir ${LOG_DIR}
 
@@ -23,9 +23,9 @@
 # cp -r ./ShapleyFL/benchmark/RAW_DATA/MNIST ${DATA_DIR}
 
 # cd ShapleyFL
-DATA_DIR=benchmark/RAW_DATA/CIFAR100
+DATA_DIR=benchmark/RAW_DATA/CIFAR10
 
-TASK="cifar100_classification"
+TASK="cifar10_classification"
 DIST=1
 SKEW=0.5
 NUM_CLIENTS=10
@@ -57,4 +57,5 @@ python main.py \
     --sample full \
     --exact \
     --data_path $DATA_DIR \
-    --fedtask_path fedtask
+    --fedtask_path fedtask \
+    --start_round 25
