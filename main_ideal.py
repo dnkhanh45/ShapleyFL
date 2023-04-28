@@ -19,14 +19,14 @@ def main():
         end <= 0:
         print("No selected subset!")
         return
-    wandb.init(
-        project='SV_FL',
-        name="IdealSV_start_{}_end_{}_{}".format(start, end, option['task']),
-        group=f"{option['task'].split('_')[0]}_part2",
-        entity="aiotlab",
-        tags=["ideal", option['task'].split('_')[2], option['task'].split('_')[3], option['task'].split('_')[4]],
-        config=option
-    )
+    # wandb.init(
+    #     project='SV_FL',
+    #     name="IdealSV_start_{}_end_{}_{}".format(start, end, option['task']),
+    #     group=f"{option['task'].split('_')[0]}_check",
+    #     entity="aiotlab",
+    #     tags=["ideal", option['task'].split('_')[2], option['task'].split('_')[3], option['task'].split('_')[4]],
+    #     config=option
+    # )
     for subset_index in range(start, end):
         subset = [client for client in all_clients if client.name in CLIENTS_BITSET.fromint(subset_index).members()]
         print(subset_index, subset)
