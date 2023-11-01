@@ -57,6 +57,6 @@ python main_ideal.py \
     --aggregate weighted_scale \
     --sample full \
     --start 825 \
-    --end 925 \
+    --end 950 \
     --fedtask_path fedtask \
     --log_folder $LOG_DIR
