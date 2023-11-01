@@ -33,8 +33,8 @@ SEED=0
 python generate_fedtask.py --benchmark $TASK --dist $DIST --skew $SKEW --num_clients $NUM_CLIENTS --seed $SEED
 
 TASK="${TASK}_cnum${NUM_CLIENTS}_dist${DIST}_skew${SKEW}_seed${SEED}"
-GPU_IDS=( 1 )
-NUM_THREADS=1
+GPU_IDS=( 0 )
+NUM_THREADS=2
 BATCH_SIZE=64
 NUM_ROUNDS=50
 PROPORTION=1.0
