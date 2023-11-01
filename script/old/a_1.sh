@@ -1,6 +1,6 @@
 TASK="synthetic_classification"
 DIST=10
-SKEW=1
+SKEW=1.0
 NUM_CLIENTS=10
 SEED=0
 python generate_fedtask.py --benchmark $TASK --dist $DIST --skew $SKEW --num_clients $NUM_CLIENTS --seed $SEED
